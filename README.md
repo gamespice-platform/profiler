@@ -1,5 +1,3 @@
-# dot-profiler
-
 Finds the cause of frame spikes. When a frame runs over budget it logs which system took the time and what that system was doing, names causes that repeat on a beat, draws an overlay of the top costs, and writes JSON and text reports. It can run headless for a nightly performance budget.
 
 Depends on dot-core only (`DotFrameCost`, `DotHitchLog`, `DotSpaceQuery`, API level 30 or later). dot-console, dot-menu, dot-server and dot-server-query are used when present.

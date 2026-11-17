@@ -32,7 +32,7 @@ const RENDER_MONITORS: Array = [
 ## Monitors whose first-to-last change the report gives as growth.
 const GROWTH: Array[String] = ["nodes", "objects", "orphan_nodes", "resources", "static_mb", "video_mb", "texture_mb", "buffer_mb"]
 ## A timeline frame is flagged when it is this many times the running average and at least FLAG_MIN_MS above it.
-const FLAG_X := 2.0
+const FLAG_X := DotProfilerReportText.FLAG_X
 const FLAG_MIN_MS := 2.0
 ## Flagged frames kept, the slowest when there are more.
 const FLAG_KEEP := 200

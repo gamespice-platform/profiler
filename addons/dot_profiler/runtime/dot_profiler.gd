@@ -15,6 +15,12 @@ const CAPTURE_ACTION := &"profiler_capture"
 ## Opens and closes the options window over the game; bound to Shift+F10 by [method enable_menu_key].
 const MENU_ACTION := &"profiler_menu"
 
+# The UI scripts name DotProfiler back, so they are loaded by uid at use: preloading them would put the
+# profiler and its UI in one script loop, which Godot 4.7 never frees.
+const _OVERLAY_UID := "uid://dhypu2jlflde8"
+const _PANEL_UID := "uid://cj8kqa4iwjy0p"
+const _WINDOW_UID := "uid://bbut5ootelpof"
+
 ## A frame over budget, attributed: {t, ms, cause, what, hints, period, physics, script, render, wait, systems}.
 signal spike(info: Dictionary)
 signal recording_started(seconds: float)
@@ -405,18 +411,18 @@ func enable_capture_key(keycode: Key = KEY_F10) -> void:
 
 ## Binds Shift+[param keycode] to [constant MENU_ACTION] when the project has no binding, and listens for it.
 func enable_menu_key(keycode: Key = KEY_F10) -> void:
-	DotProfilerWindow.bind_key(MENU_ACTION, keycode)
+	load(_WINDOW_UID).bind_key(MENU_ACTION, keycode)
 	set_process_input(true)
 
 
 ## True while the options window is up.
 func is_menu_open() -> bool:
-	return DotProfilerWindow.of(self) != null
+	return load(_WINDOW_UID).of(self) != null
 
 
 ## Opens the options window over the game, or closes it when up. True when it is now open.
 func toggle_menu() -> bool:
-	return DotProfilerWindow.toggle(self)
+	return bool(load(_WINDOW_UID).toggle(self))
 
 
 func _input(event: InputEvent) -> void:
@@ -580,7 +586,7 @@ func load_ui_prefs() -> bool:
 ## The panel the settings menu shows: overlay toggle, record and stop, the saved path and recent recordings.
 ## [param kit] is dot-menu's DotMenuKit, used by duck typing; null builds plain controls.
 func make_menu_panel(kit: Object = null) -> Control:
-	var panel := DotProfilerPanel.new()
+	var panel: Control = load(_PANEL_UID).new()
 	panel.setup(self, kit)
 	return panel
 
@@ -697,7 +703,7 @@ func _stop_watch() -> void:
 
 func _show_overlay(on: bool) -> void:
 	if on and _overlay == null:
-		_overlay = DotProfilerOverlay.new()
+		_overlay = load(_OVERLAY_UID).new()
 		_overlay.profiler = self
 		add_child(_overlay)
 	elif not on and _overlay != null:

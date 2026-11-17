@@ -13,6 +13,8 @@ const FRAME_MIN_MS := 0.2
 const FLAGGED_LINES := 15
 ## Census classes the text lists.
 const CENSUS_LINES := 12
+## [constant DotProfilerSession.FLAG_X], kept here so this file never names the session (a script loop Godot 4.7 never frees).
+const FLAG_X := 2.0
 
 
 static func lines(r: Dictionary, top: int = 20) -> PackedStringArray:
@@ -301,7 +303,7 @@ static func _timeline(r: Dictionary) -> PackedStringArray:
 	if tl.is_empty():
 		return out
 	out.append("")
-	out.append("Timeline (per second; ms per frame; flagged = over budget or %.0fx the running average):" % DotProfilerSession.FLAG_X)
+	out.append("Timeline (per second; ms per frame; flagged = over budget or %.0fx the running average):" % FLAG_X)
 	out.append("  %4s %6s %8s %8s %8s %8s %8s %8s %8s" % ["s", "frames", "avg", "max", "physics", "script", "render", "wait", "flagged"])
 	for row: Dictionary in tl.get("seconds", []):
 		out.append("  %4d %6d %8.2f %8.2f %8.2f %8.2f %8.2f %8.2f %8d" % [row.s, row.frames, row.avg_ms, row.max_ms,

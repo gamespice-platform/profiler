@@ -293,7 +293,7 @@ func _diff_reference(saved_json: String) -> void:
 	DotLog.info(CHANNEL, "diff against %s (saved to %s.diff.txt):\n%s" % [config.reference.get_file(), saved_json.get_basename(), text])
 
 
-## Adds a count reported beside the cost of systems starting with [param prefix] (e.g. bots and "arena.bot").
+## Adds a count reported beside the cost of systems starting with [param prefix] (e.g. bots and "fc.bot").
 ## It is read every frame only while recording with [param group] listed in profiler_groups, so registering is free.
 ## [param count] returns an int; it replaces a SceneTree group of that name.
 func add_counter(group: String, count: Callable, prefix: String = "") -> void:

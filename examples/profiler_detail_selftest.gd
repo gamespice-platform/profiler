@@ -45,13 +45,13 @@ func _check(ok: bool, what: String) -> void:
 func _config() -> void:
 	var c := DotProfilerConfig.new()
 	_check(not c.timeline and not c.render_detail and c.groups == "" and not c.census and c.script_top == 0, "every detail option is off by default")
-	var g := DotProfilerConfig.parse_groups("bots:arena.bot, players:arena.p_,props")
-	_check(g.size() == 3 and g[0].group == "bots" and g[0].prefix == "arena.bot" and g[2].prefix == "", "groups parse as name and system prefix")
+	var g := DotProfilerConfig.parse_groups("bots:fc.bot, players:fc.p_,props")
+	_check(g.size() == 3 and g[0].group == "bots" and g[0].prefix == "fc.bot" and g[2].prefix == "", "groups parse as name and system prefix")
 	var b := DotProfilerConfig.parse_buckets("motor=motor|move,weapons=weapon")
 	_check(b.size() == 2 and (b[0].match as PackedStringArray).size() == 2 and b[1].name == "weapons", "script buckets parse as name and parts")
 	_check(c.set_text("script_top", "40").ok and c.script_top == 40, "script_top is set from console text")
 	_check(not c.set_text("script_top", "900").ok and c.script_top == 40, "an out-of-range script_top is refused and put back")
-	_check(not c.set_text("script_buckets", "=x").ok and not c.set_text("groups", ":arena.bot").ok, "a bucket or group without a name is refused")
+	_check(not c.set_text("script_buckets", "=x").ok and not c.set_text("groups", ":fc.bot").ok, "a bucket or group without a name is refused")
 	_sections += 1
 
 
@@ -92,7 +92,7 @@ func _timeline() -> void:
 func _groups_and_growth() -> void:
 	var s := DotProfilerSession.new()
 	var n := [16]
-	var counters: Array[Dictionary] = [{"group": "bots", "prefix": "arena.bot", "count": func() -> int: return n[0]}]
+	var counters: Array[Dictionary] = [{"group": "bots", "prefix": "fc.bot", "count": func() -> int: return n[0]}]
 	s.counters = counters
 	s.begin()
 	for i in 10:
@@ -100,8 +100,8 @@ func _groups_and_growth() -> void:
 		s.add(_rec(i, 10.0), PackedInt64Array())
 	var r := s.to_report()
 	r["frames"] = 10
-	r["systems"] = [{"system": "arena.bot_brain", "ms": 24.0, "calls": 240, "ms_per_frame": 2.4},
-		{"system": "arena.p_motor", "ms": 5.0, "calls": 10, "ms_per_frame": 0.5}]
+	r["systems"] = [{"system": "fc.bot_brain", "ms": 24.0, "calls": 240, "ms_per_frame": 2.4},
+		{"system": "fc.p_motor", "ms": 5.0, "calls": 10, "ms_per_frame": 0.5}]
 	DotProfilerSession.attach_group_systems(r)
 	var g: Dictionary = r.groups[0]
 	_check(is_equal_approx(g.count.avg, 24.0) and is_equal_approx(g.count.max, 32.0), "a counter is read every frame")
@@ -141,11 +141,11 @@ func _scripts() -> void:
 func _compare() -> void:
 	var a := {"frames": 10, "p50_ms": 10.0, "phases": {}, "systems": [{"system": "bots", "ms_per_frame": 2.0},
 		{"system": "hud", "ms_per_frame": 1.0}], "monitors": {"draw_calls": {"avg": 1000.0}},
-		"groups": [{"group": "bots", "count": {"avg": 32.0}, "systems": [{"system": "arena.bot_brain", "us_per_unit": 50.0}]}],
+		"groups": [{"group": "bots", "count": {"avg": 32.0}, "systems": [{"system": "fc.bot_brain", "us_per_unit": 50.0}]}],
 		"script_functions": {"functions": [{"function": "think", "script": "res://brain.gd", "line": 3, "self_ms": 1.0}]}}
 	var b := {"frames": 10, "p50_ms": 10.2, "phases": {}, "systems": [{"system": "bots", "ms_per_frame": 2.5},
 		{"system": "hud", "ms_per_frame": 1.02}], "monitors": {"draw_calls": {"avg": 1200.0}},
-		"groups": [{"group": "bots", "count": {"avg": 32.0}, "systems": [{"system": "arena.bot_brain", "us_per_unit": 60.0}]}],
+		"groups": [{"group": "bots", "count": {"avg": 32.0}, "systems": [{"system": "fc.bot_brain", "us_per_unit": 60.0}]}],
 		"script_functions": {"functions": [{"function": "think", "script": "res://brain.gd", "line": 3, "self_ms": 1.3}]}}
 	var rows := DotProfilerCompare.compare(a, b)
 	_check(rows.any(func(x: Dictionary) -> bool: return x.section == "group" and String(x.name).contains("us/unit") and is_equal_approx(x.delta, 10.0)),

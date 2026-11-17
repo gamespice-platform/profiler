@@ -229,7 +229,7 @@ func frame_rows(flat: PackedInt64Array) -> Array[Dictionary]:
 	return out
 
 
-## Folded stacks: "frame;physics;scripts;arena.physics 12345" per node, its exclusive microseconds over the recording.
+## Folded stacks: "frame;physics;scripts;fc.physics 12345" per node, its exclusive microseconds over the recording.
 ## flamegraph.pl, speedscope and inferno read it as it is.
 func folded() -> String:
 	var lines := PackedStringArray()

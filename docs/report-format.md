@@ -79,7 +79,7 @@ frame
     step         the engine's physics step and sync after the scripts, once per tick
 ```
 
-Spans reported through `DotFrameCost` nest under the root that contains them and under each other by time, so `frame;physics;scripts;arena.bots;q.intersect_ray` is a ray cast by bots inside a physics tick. Work no span covers is the parent's `self_ms`. Tracing is on only while recording with `profiler_trace` 1.
+Spans reported through `DotFrameCost` nest under the root that contains them and under each other by time, so `frame;physics;scripts;fc.bots;q.intersect_ray` is a ray cast by bots inside a physics tick. Work no span covers is the parent's `self_ms`. Tracing is on only while recording with `profiler_trace` 1.
 
 ## Folded stacks
 

@@ -12,18 +12,18 @@ import profile_compare as pc  # noqa: E402
 
 A = {"frames": 10, "p50_ms": 10.0, "phases": {}, "systems": [{"system": "bots", "ms_per_frame": 2.0}, {"system": "hud", "ms_per_frame": 1.0}],
      "monitors": {"draw_calls": {"avg": 1000.0}},
-     "groups": [{"group": "bots", "count": {"avg": 32.0}, "systems": [{"system": "arena.bot_brain", "us_per_unit": 50.0}]}],
+     "groups": [{"group": "bots", "count": {"avg": 32.0}, "systems": [{"system": "fc.bot_brain", "us_per_unit": 50.0}]}],
      "script_functions": {"functions": [{"function": "think", "script": "res://brain.gd", "line": 3, "self_ms": 1.0}]}}
 B = {"frames": 10, "p50_ms": 10.2, "phases": {}, "systems": [{"system": "bots", "ms_per_frame": 2.5}, {"system": "hud", "ms_per_frame": 1.02}],
      "monitors": {"draw_calls": {"avg": 1200.0}},
-     "groups": [{"group": "bots", "count": {"avg": 32.0}, "systems": [{"system": "arena.bot_brain", "us_per_unit": 60.0}]}],
+     "groups": [{"group": "bots", "count": {"avg": 32.0}, "systems": [{"system": "fc.bot_brain", "us_per_unit": 60.0}]}],
      "script_functions": {"functions": [{"function": "think", "script": "res://brain.gd", "line": 3, "self_ms": 1.3}]}}
 
 
 class CompareTest(unittest.TestCase):
     def test_sections(self):
         names = {(s, n) for s, n, _, _ in pc.compare(A, B, 0.05)}
-        self.assertIn(("group", "bots us/unit arena.bot_brain"), names)
+        self.assertIn(("group", "bots us/unit fc.bot_brain"), names)
         self.assertIn(("script", "think brain.gd:3"), names)
         self.assertIn(("monitor", "draw_calls"), names)
 

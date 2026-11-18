@@ -161,3 +161,52 @@ static func prune(dir: String, keep: int) -> void:
 				if err != OK:
 					DotLog.warn(CHANNEL, "could not delete old recording %s: %s" % [p, error_string(err)])
 	DotWeb.sync_filesystem()
+
+
+## Attributes one [DotHitchLog] hitch record ([method DotProfiler.attribute]): the system that took at least
+## [param cause_share] of it, else "engine.<phase>", plus hints read from its counter deltas, marks and new nodes.
+static func attribute(rec: Dictionary, cause_share: float) -> Dictionary:
+	var ms: float = rec.get("ms", 0.0)
+	var systems: Dictionary = rec.get("systems", {})
+	var cause := ""
+	var what := ""
+	var top_ms := 0.0
+	for s: Variant in systems:
+		var v: float = systems[s].get("ms", 0.0)
+		if v > top_ms:
+			top_ms = v
+			cause = String(s)
+			what = systems[s].get("what", "")
+	if cause == "" or top_ms < ms * cause_share:
+		var phase := "script"
+		for p: String in ["physics", "script", "render", "wait"]:
+			if float(rec.get(p, 0.0)) > float(rec.get(phase, 0.0)):
+				phase = p
+		cause = "engine." + phase
+		what = ""
+	var hints: Array[String] = []
+	var d: Dictionary = rec.get("deltas", {})
+	if int(d.get("compile", 0)) > 0:
+		hints.append("%d shader compile(s)" % d.compile)
+	if int(d.get("added", 0)) > 0:
+		hints.append("+%d nodes" % d.added)
+	if int(d.get("res", 0)) > 0:
+		hints.append("+%d resources" % d.res)
+	if int(d.get("kb", 0)) > 512:
+		hints.append("+%d KB static memory" % d.kb)
+	if int(d.get("logs", 0)) > 0:
+		hints.append("%d log line(s)" % d.logs)
+	var added: Array = rec.get("added", [])
+	if not added.is_empty():
+		hints.append("new=" + ", ".join(added.slice(0, 3)))
+	var marks: Array = rec.get("marks", [])
+	if not marks.is_empty():
+		hints.append("marks=" + ", ".join(marks.slice(0, 3)))
+	var out := {"t": rec.get("t", 0.0), "ms": ms, "cause": cause, "what": what, "hints": hints, "period": ""}
+	for p: String in ["physics", "script", "render", "wait"]:
+		out[p] = rec.get(p, 0.0)
+	var sys_ms := {}
+	for s: Variant in systems:
+		sys_ms[String(s)] = systems[s].get("ms", 0.0)
+	out["systems"] = sys_ms
+	return out

@@ -1,4 +1,4 @@
-[![dot-profiler - GameSpice addon](docs/banner.png)](https://moddingcommunity.com/a/272-dot-profiler)
+[![Profiler - GameSpice addon](docs/banner.png)](https://moddingcommunity.com/a/272-dot-profiler)
 
 Finds the cause of frame spikes. When a frame runs over budget it logs which system took the time and what that system was doing, names causes that repeat on a beat, draws an overlay of the top costs, and writes JSON and text reports. It can run headless for a nightly performance budget.
 

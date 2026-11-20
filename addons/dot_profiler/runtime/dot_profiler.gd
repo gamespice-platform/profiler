@@ -523,7 +523,7 @@ func set_overlay_visible(on: bool) -> void:
 	var _r := config.set_text("overlay", "1" if on else "0")
 
 
-## Registers profiler_* variables and the record, stop and report commands on a dot-console [code]DotConsoleLocal[/code].
+## Registers profiler_* variables and the record, stop and report commands on a GameSpice Console [code]DotConsoleLocal[/code].
 func bind_console(local: Object) -> void:
 	if local == null or not local.has_method(&"add_command"):
 		return
@@ -584,7 +584,7 @@ func load_ui_prefs() -> bool:
 
 
 ## The panel the settings menu shows: overlay toggle, record and stop, the saved path and recent recordings.
-## [param kit] is dot-menu's DotMenuKit, used by duck typing; null builds plain controls.
+## [param kit] is GameSpice Menu's DotMenuKit, used by duck typing; null builds plain controls.
 func make_menu_panel(kit: Object = null) -> Control:
 	var panel: Control = load(_PANEL_UID).new()
 	panel.setup(self, kit)

@@ -2,7 +2,7 @@ class_name DotProfilerPanel
 extends VBoxContainer
 
 ## The settings menu's profiler section: overlay toggle, Record / Stop with the time so far, where the report went,
-## and the recordings already on this device. Built with dot-menu's kit when given one, plain controls otherwise.
+## and the recordings already on this device. Built with GameSpice Menu's kit when given one, plain controls otherwise.
 
 var overlay_toggle: CheckButton = null
 var record_button: Button = null

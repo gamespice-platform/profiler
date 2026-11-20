@@ -100,7 +100,7 @@ static func corner_pos(corner: String, view: Vector2, size: Vector2, ox: float, 
 	return Vector2(maxf(x, 0.0), maxf(y, 0.0))
 
 
-## The net readout dot-menu draws (a node named NetStat) is hidden while the graph carries the net lines.
+## The net readout GameSpice Menu draws (a node named NetStat) is hidden while the graph carries the net lines.
 func _hide_net_readout(on: bool) -> void:
 	if _hidden_net != null and (not on or not is_instance_valid(_hidden_net)):
 		if is_instance_valid(_hidden_net):

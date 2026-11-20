@@ -1,7 +1,7 @@
 extends Node
 
-## dot-profiler's suite: period detection, attribution, config, a live run with a system that spikes on a beat,
-## the console commands, the menu panel's Record then Stop writing a file, and sv_profiler_* on a real dot-server console. Exits non-zero on any failure.
+## GameSpice Profiler's suite: period detection, attribution, config, a live run with a system that spikes on a beat,
+## the console commands, the menu panel's Record then Stop writing a file, and sv_profiler_* on a real GameSpice Server console. Exits non-zero on any failure.
 
 const SECTIONS := 8
 const CHECKS := 73

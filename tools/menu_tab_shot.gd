@@ -1,6 +1,6 @@
 extends SceneTree
 
-## Renders dot-menu's stock Advanced page with a DotProfiler placed, scrolled to its Performance card.
+## Renders GameSpice Menu's stock Advanced page with a DotProfiler placed, scrolled to its Performance card.
 ## `godot --path . --script tools/menu_tab_shot.gd -- <out.png>`; needs a renderer (xvfb-run or a GPU box).
 
 const DIR := "user://menu_tab_shot"

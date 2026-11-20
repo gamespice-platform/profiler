@@ -57,7 +57,7 @@ extends DotConfig
 ## Width of one frame's column in the graph, in pixels (1 to 6); the graph is graph_frames of these wide.
 @export var graph_col_px: int = 2
 
-## Draw the connection (ping, bytes in and out) in the profiler's graph and hide dot-menu's separate net_stat panel while the overlay is up.
+## Draw the connection (ping, bytes in and out) in the profiler's graph and hide GameSpice Menu's separate net_stat panel while the overlay is up.
 @export var overlay_merge_net: bool = true
 
 ## Report sections (docs/report-format.md); off leaves the section out of the report. Collection that costs time
@@ -94,7 +94,7 @@ extends DotConfig
 ## Metric samples (memory, nodes, objects, network, players) a recording takes per second; 0 takes none.
 @export var sample_hz: float = 1.0
 
-## Publish frame time, spikes and memory in the server query's game section (dot-server-query).
+## Publish frame time, spikes and memory in the server query's game section (GameSpice Server Query).
 @export var query: bool = false
 
 ## While recording, time every span reported through DotFrameCost so the report has a call tree below the systems.
@@ -233,7 +233,7 @@ static func cvar_name(key: String) -> String:
 	return "profiler_" + key
 
 
-## Registers a profiler_* cvar per setting through dot-server's `add_cvar`, by duck typing; returns them.
+## Registers a profiler_* cvar per setting through GameSpice Server's `add_cvar`, by duck typing; returns them.
 func bind_cvars(add: Callable, flags: int = 0) -> Array:
 	var made: Array = []
 	for key in config_keys():

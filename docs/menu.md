@@ -1,6 +1,6 @@
 # Settings menu integration
 
-dot-profiler does not depend on dot-menu, and dot-menu does not depend on dot-profiler. A `DotProfiler` registers itself in `DotRegistry` as `&"dot_profiler"` (`register_as_service`, on by default). A menu that finds that service and sees `make_menu_panel` on it adds a Performance section built by `make_menu_panel(kit)`, passing its `DotMenuKit` so the panel matches the menu's theme. With no profiler placed, the section is not shown.
+GameSpice Profiler does not depend on GameSpice Menu, and GameSpice Menu does not depend on GameSpice Profiler. A `DotProfiler` registers itself in `DotRegistry` as `&"dot_profiler"` (`register_as_service`, on by default). A menu that finds that service and sees `make_menu_panel` on it adds a Performance section built by `make_menu_panel(kit)`, passing its `DotMenuKit` so the panel matches the menu's theme. With no profiler placed, the section is not shown.
 
 The panel holds:
 

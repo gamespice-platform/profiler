@@ -1,6 +1,6 @@
 # The profiler on a dedicated server
 
-A headless server has no menu and no overlay, so its profiler is driven from dot-server's console: the server's stdin, `server.cfg`, or RCON.
+A headless server has no menu and no overlay, so its profiler is driven from GameSpice Server's console: the server's stdin, `server.cfg`, or RCON.
 
 ```gdscript
 var prof := DotProfiler.new()
@@ -38,7 +38,7 @@ Every `profiler_*` setting in [design.md](design.md#configuration) is also a ser
 
 ## Remote reading
 
-Over RCON every command above works as on the console. For a query client, `profiler_query 1` adds `profiler_ms`, `profiler_spikes`, `profiler_period`, `profiler_static_mb` and `profiler_nodes` to the dot-server-query game section. It is off by default because the query answers anyone.
+Over RCON every command above works as on the console. For a query client, `profiler_query 1` adds `profiler_ms`, `profiler_spikes`, `profiler_period`, `profiler_static_mb` and `profiler_nodes` to the GameSpice Server Query game section. It is off by default because the query answers anyone.
 
 ## Tested
 

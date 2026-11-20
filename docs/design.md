@@ -1,4 +1,4 @@
-# dot-profiler design
+# GameSpice Profiler design
 
 ## What it answers
 
@@ -8,7 +8,7 @@ A frame over budget is logged with the system that caused it and what that syste
 
 | Piece | Where | Job |
 | --- | --- | --- |
-| `DotFrameCost` | dot-core `profile/` | Systems report their own per-frame cost: `var t := DotFrameCost.now()` ... `DotFrameCost.add(&"system", t, "what")`. Off and free by default; `now()` returns 0 while off and `add` ignores 0. |
+| `DotFrameCost` | GameSpice Core `profile/` | Systems report their own per-frame cost: `var t := DotFrameCost.now()` ... `DotFrameCost.add(&"system", t, "what")`. Off and free by default; `now()` returns 0 while off and `add` ignores 0. |
 | `DotHitchLog` | dot-core `profile/` | Measures each frame's phases (physics, script, render, wait), counter deltas, marks and new nodes; while enabled it drains `DotFrameCost.take()` once per frame and puts the costs on each hitch as `systems`. |
 | `DotProfiler` | `runtime/` | The node a game places. Owns a `DotHitchLog`, attributes each spike, tracks periods, keeps running averages for the overlay, records to `user://profiles`. |
 | `DotProfilerPeriod` | `core/` | Finds the beat in a list of spike times: the median gap, and how many gaps fall within `period_tolerance` of it. |
@@ -75,10 +75,10 @@ _rebuild_paths()
 DotFrameCost.add(&"navigation.rebuild", t, "%d paths" % n)
 ```
 
-Physics queries go through dot-core's `DotSpaceQuery`, which counts and times each one by kind for the system named, for example `DotSpaceQuery.cast_motion(space, params, &"p_controller")`. A query made without it can be reported with `DotFrameCost.add_query(system, kind, t)`.
+Physics queries go through GameSpice Core's `DotSpaceQuery`, which counts and times each one by kind for the system named, for example `DotSpaceQuery.cast_motion(space, params, &"p_controller")`. A query made without it can be reported with `DotFrameCost.add_query(system, kind, t)`.
 
 Exactly one reader drains `DotFrameCost` per frame (`DotHitchLog` while enabled). A second reader would see half the frame.
 
 ## Existing frame clocks
 
-`DotHitchLog` keeps its old behaviour and fields; `systems` is an addition. dot-menu's `DotMenuFrameClock` and game-fatal-contact's frame probe keep working and can be retired in favour of a `DotProfiler` once each consumer moves.
+`DotHitchLog` keeps its old behaviour and fields; `systems` is an addition. GameSpice Menu's `DotMenuFrameClock` and game-fatal-contact's frame probe keep working and can be retired in favour of a `DotProfiler` once each consumer moves.

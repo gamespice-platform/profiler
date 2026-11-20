@@ -2,7 +2,7 @@ class_name DotProfilerNet
 extends RefCounted
 
 ## Reads the network rate for the merged graph without draining anything: it only diffs the byte totals of a
-## metered peer (dot-net's DotMeteredPeer: bytes_in, bytes_out), by duck typing, so a game without one reads 0.
+## metered peer (GameSpice Net's DotMeteredPeer: bytes_in, bytes_out), by duck typing, so a game without one reads 0.
 
 var _last_in := -1
 var _last_out := -1

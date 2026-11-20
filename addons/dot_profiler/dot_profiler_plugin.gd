@@ -1,7 +1,7 @@
 @tool
 extends EditorPlugin
 
-## Editor entry point for dot-profiler. No autoloads: a game places one DotProfiler where it wants one.
+## Editor entry point for GameSpice Profiler. No autoloads: a game places one DotProfiler where it wants one.
 
 
 func _enter_tree() -> void:

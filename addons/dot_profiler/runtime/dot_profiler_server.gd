@@ -2,7 +2,7 @@ class_name DotProfilerServer
 extends Node
 
 ## A dedicated server's profiler controls: sv_profiler_* commands, profiler_* cvars, query keys.
-## dot-server and dot-server-query are reached by duck typing through [DotRegistry]; [method install]
+## GameSpice Server and GameSpice Server Query are reached by duck typing through [DotRegistry]; [method install]
 ## parents it under the profiler.
 
 const CHANNEL := "dot.profiler.server"
@@ -89,7 +89,7 @@ func help_for(name: String) -> String:
 	return COMMANDS.get(name, "")
 
 
-## Runs one sv_profiler_* line; dot-server's console has already checked the caller's permission.
+## Runs one sv_profiler_* line; GameSpice Server's console has already checked the caller's permission.
 func execute(line: String) -> Variant:
 	var words := line.strip_edges().split(" ", false)
 	if words.is_empty():

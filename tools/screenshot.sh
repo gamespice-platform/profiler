@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Render the profiler demo (overlay plus the settings panel after a recording) to a PNG under Xvfb.
-# With `menu`, render dot-menu's stock Advanced page with a profiler placed instead.
+# With `menu`, render GameSpice Menu's stock Advanced page with a profiler placed instead.
 #
 #   heavy -- tools/screenshot.sh <out.png> [menu]
 set -uo pipefail

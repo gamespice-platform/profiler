@@ -63,6 +63,8 @@ var _rec_phases := {}
 var _rec_samples: Array = []
 var _next_sample_usec := 0
 var _last_saved := ""
+var _last_perf := ""
+var _perf_opts: Dictionary = {}
 var _stop_pending := false
 var _session: DotProfilerSession = null
 var _ticks: DotProfilerTicks = null
@@ -153,6 +155,8 @@ func start_recording(seconds: float = 0.0) -> DotResult:
 	_session.unit = _unit_counter()
 	_session.begin()
 	DotProfilerCounts.begin()
+	DotProfilerNetCost.begin()
+	DotProfilerLoads.begin(config.perf_load_min_ms)
 	if not get_tree().node_added.is_connected(_on_node_added):
 		get_tree().node_added.connect(_on_node_added)
 		get_tree().node_removed.connect(_on_node_removed)
@@ -194,10 +198,14 @@ func stop_recording() -> DotResult:
 		_scripts = null
 	if config.census and not _census_start.is_empty():
 		_census = census_diff(_census_start, census())
+	var net_rows := DotProfilerNetCost.end(_rec_seconds, config.perf_top)
+	var load_rows := DotProfilerLoads.end(config.perf_top)
 	var report := build_report()
 	_force_render = false
 	var res := DotProfilerReport.write(report, config.record_dir, config.keep_recordings,
 		_session.folded() if _session != null else "")
+	if config.perf_report and res.ok:
+		_last_perf = DotProfilerPerfReport.save(get_tree(), config, report, net_rows, load_rows, _perf_opts, CHANNEL)
 	if _ticks != null:
 		_ticks.queue_free()
 		_ticks = null
@@ -211,6 +219,16 @@ func stop_recording() -> DotResult:
 		DotLog.warn(CHANNEL, "profile not saved: %s" % res.error.message)
 	recording_finished.emit(res)
 	return res
+
+
+## Adds a key to the next perf reports' options: map, bots, players, tags (docs/perf-report.md "How a new game plugs in").
+func set_perf_option(key: String, value: Variant) -> void:
+	_perf_opts[key] = value
+
+
+## Path of the last perf report written, or "".
+func last_perf_path() -> String:
+	return _last_perf
 
 
 ## The report of the recording so far (or the last one), without writing it.

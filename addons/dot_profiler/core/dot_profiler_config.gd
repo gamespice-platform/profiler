@@ -109,6 +109,24 @@ extends DotConfig
 ## A saved report (JSON path) every recording is diffed against when it is written; the diff is logged and saved as .diff.txt.
 @export var reference: String = ""
 
+## Also write the stable machine-readable perf report (perf-<stamp>.json, docs/perf-report.md) beside every recording.
+@export var perf_report: bool = true
+
+## Rows each perf report list keeps (budget, addons, hitches, network, loads, render top); 0 keeps every row.
+@export var perf_top: int = 25
+
+## The game id written into the perf report; empty uses the project name.
+@export var perf_game_id: String = ""
+
+## The perf report's role: client, server or standalone; empty is server on a headless run, else client.
+@export var perf_role: String = ""
+
+## At the end of a recording, walk the scene once and list the materials and meshes that cost the most draws.
+@export var perf_render_scan: bool = false
+
+## Asset loads shorter than this many ms are left out of the perf report's loading list; 0 keeps every one.
+@export var perf_load_min_ms: float = 0.0
+
 ## Seconds the capture key (or profiler_capture) records.
 @export var capture_seconds: float = 10.0
 
@@ -194,6 +212,8 @@ func validate() -> DotResult:
 		return DotResult.fail(DotError.CODE_INVALID, "profiler_worst_frames must be 0 to 50 and profiler_capture_seconds above 0, at most 3600.")
 	if suspects_top < 0 or suspects_top > 100 or unit_target_us < 0.0:
 		return DotResult.fail(DotError.CODE_INVALID, "profiler_suspects_top must be 0 to 100 and profiler_unit_target_us 0 or more.")
+	if perf_top < 0 or perf_load_min_ms < 0.0 or not ["", "client", "server", "standalone"].has(perf_role):
+		return DotResult.fail(DotError.CODE_INVALID, "profiler_perf_top and profiler_perf_load_min_ms must be 0 or more and profiler_perf_role empty, client, server or standalone.")
 	if script_top < 0 or script_top > 500:
 		return DotResult.fail(DotError.CODE_INVALID, "profiler_script_top must be 0 to 500.")
 	for entry in parse_groups(groups):

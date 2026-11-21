@@ -6,10 +6,10 @@ extends RefCounted
 ## with -d; [method start] says so and does nothing otherwise. The table arrives as printed lines, which a
 ## [Logger] catches and [method parse] reads.
 
-const CHANNEL := "dot.profiler"
+const CHANNEL := "gs.profiler"
 const HEADER := "ACCUMULATED"
 ## Rows from this file are left out: [method start] turns the engine profiler on mid-call, so it reads as open all recording.
-const OWN_SCRIPT := "dot_profiler/runtime/dot_profiler_scripts.gd"
+const OWN_SCRIPT := "gs_profiler/runtime/gs_profiler_scripts.gd"
 
 
 class Catcher extends Logger:

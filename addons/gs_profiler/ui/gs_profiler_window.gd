@@ -2,12 +2,12 @@ class_name GSProfilerWindow
 extends CanvasLayer
 
 ## The profiler's options as a window over the running game (Shift+F10 or profiler_menu): the same panel as the
-## settings menu, reachable while playing. It is a dot_pointer_modal, so game clients leave the mouse free while it is up.
+## settings menu, reachable while playing. It is a gs_pointer_modal, so game clients leave the mouse free while it is up.
 
-## Emitted true when the window frees the mouse, false when it gives it back (the dot_pointer_modal contract).
+## Emitted true when the window frees the mouse, false when it gives it back (the gs_pointer_modal contract).
 signal pointer_mode_changed(on: bool)
 
-const GROUP := &"dot_pointer_modal"
+const GROUP := &"gs_pointer_modal"
 const WIDTH := 460.0
 const MARGIN := 20.0
 

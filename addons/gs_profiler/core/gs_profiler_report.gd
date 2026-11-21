@@ -5,7 +5,7 @@ extends RefCounted
 ## [method build] makes it from frame times, spikes, systems and phases; [method write] saves it
 ## under a directory, keeping the newest N, and returns the JSON path. docs/report-format.md has the keys.
 
-const CHANNEL := "dot.profiler"
+const CHANNEL := "gs.profiler"
 const VERSION := 2
 
 
@@ -64,7 +64,7 @@ static func percentile(sorted: PackedFloat32Array, p: float) -> float:
 ## The report as lines a person reads: totals, the causes worst first, the systems, then the worst spikes.
 static func to_text(r: Dictionary, top: int = 20) -> PackedStringArray:
 	var out := PackedStringArray()
-	out.append("dot-profiler report %s  scene=%s" % [r.get("made", ""), r.get("scene", "")])
+	out.append("gs-profiler report %s  scene=%s" % [r.get("made", ""), r.get("scene", "")])
 	out.append("frames=%d over %.1f s  p50=%.1f p95=%.1f p99=%.1f worst=%.1f ms  budget=%.1f ms  spikes=%d" % [
 		r.get("frames", 0), r.get("wall_s", 0.0), r.get("p50_ms", 0.0), r.get("p95_ms", 0.0), r.get("p99_ms", 0.0),
 		r.get("worst_ms", 0.0), r.get("budget_ms", 0.0), r.get("spike_count", 0)])

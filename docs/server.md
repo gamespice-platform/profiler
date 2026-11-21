@@ -6,10 +6,10 @@ A headless server has no menu and no overlay, so its profiler is driven from Gam
 var prof := GSProfiler.new()
 prof.config = GSProfilerConfig.new()
 add_child(prof)
-var res := GSProfilerServer.new().install(prof)   # finds dot_console, dot_server, dot_query_source in GSRegistry
+var res := GSProfilerServer.new().install(prof)   # finds gs_console, gs_server, gs_query_source in GSRegistry
 ```
 
-`install` parents the controls under the profiler, so freeing the profiler takes the commands, cvars and query provider away again. Pass the console, server and query source explicitly when they are not registered. It fails with `CODE_UNSUPPORTED` when no dot-server console is found.
+`install` parents the controls under the profiler, so freeing the profiler takes the commands, cvars and query provider away again. Pass the console, server and query source explicitly when they are not registered. It fails with `CODE_UNSUPPORTED` when no gs-server console is found.
 
 ## Commands
 
@@ -33,7 +33,7 @@ Network bytes come from a `GSMeteredPeer` when the peer is one, otherwise from t
 
 Every `profiler_*` setting in [design.md](design.md#configuration) is also a server cvar, so `server.cfg` can set them. The two that matter most on a server:
 
-- `profiler_record_dir`: left at the default, it becomes `<log_directory>/profiles` (dot-server's `log_directory`, `user://logs` unless configured), so recordings sit beside the logs. An absolute path is accepted.
+- `profiler_record_dir`: left at the default, it becomes `<log_directory>/profiles` (gs-server's `log_directory`, `user://logs` unless configured), so recordings sit beside the logs. An absolute path is accepted.
 - `profiler_sample_hz`: metric samples per second in a recording's `samples`. On a server each sample has memory and counts, bytes in and out, players and bots.
 
 ## Remote reading

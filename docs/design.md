@@ -9,7 +9,7 @@ A frame over budget is logged with the system that caused it and what that syste
 | Piece | Where | Job |
 | --- | --- | --- |
 | `GSFrameCost` | GameSpice Core `profile/` | Systems report their own per-frame cost: `var t := GSFrameCost.now()` ... `GSFrameCost.add(&"system", t, "what")`. Off and free by default; `now()` returns 0 while off and `add` ignores 0. |
-| `GSHitchLog` | dot-core `profile/` | Measures each frame's phases (physics, script, render, wait), counter deltas, marks and new nodes; while enabled it drains `GSFrameCost.take()` once per frame and puts the costs on each hitch as `systems`. |
+| `GSHitchLog` | gs-core `profile/` | Measures each frame's phases (physics, script, render, wait), counter deltas, marks and new nodes; while enabled it drains `GSFrameCost.take()` once per frame and puts the costs on each hitch as `systems`. |
 | `GSProfiler` | `runtime/` | The node a game places. Owns a `GSHitchLog`, attributes each spike, tracks periods, keeps running averages for the overlay, records to `user://profiles`. |
 | `GSProfilerPeriod` | `core/` | Finds the beat in a list of spike times: the median gap, and how many gaps fall within `period_tolerance` of it. |
 | `GSProfilerReport` | `core/` | Builds the JSON report and its text form from a recording; writes the `.json`, `.txt` and `.folded` files ([report-format.md](report-format.md)). |
@@ -21,7 +21,7 @@ A frame over budget is logged with the system that caused it and what that syste
 | `GSProfilerDeep` | `runtime/` | Optional native samples with Linux perf next to a recording ([deep-mode.md](deep-mode.md)). |
 | `GSProfilerOverlay` | `ui/` | The top costs, frame time against budget and the last spike, drawn in a corner. |
 | `GSProfilerPanel` | `ui/` | Record / Stop with elapsed time, the saved path, Open folder and Copy path (Download on the web), the recent recordings. |
-| `dot_profiler_run` | `tools/` | The headless runner for the nightly perf budget ([runner.md](runner.md)). |
+| `gs_profiler_run` | `tools/` | The headless runner for the nightly perf budget ([runner.md](runner.md)). |
 
 ## Attribution
 
@@ -31,7 +31,7 @@ A spike is logged at WARN at most once per `profiler_warn_every_s` per cause; th
 
 ## Configuration
 
-Exported defaults < JSON file (`config_file`) < environment (`DOT_PROFILER_*`) < command line (`--profiler-*`), then the console variables at run time.
+Exported defaults < JSON file (`config_file`) < environment (`GS_PROFILER_*`) < command line (`--profiler-*`), then the console variables at run time.
 
 | cvar | Default | Meaning |
 | --- | --- | --- |
@@ -63,7 +63,7 @@ Exported defaults < JSON file (`config_file`) < environment (`DOT_PROFILER_*`) <
 | `profiler_script_buckets` | "" | Sums script functions into named buckets: comma-separated `name=part|part`, matched against script paths and function names; the rest is `other`. |
 | `profiler_query` | 0 | Publish `profiler_ms`, `profiler_spikes`, `profiler_period`, `profiler_static_mb` and `profiler_nodes` in the server query's game section. Off because the query is public. |
 
-Console commands (via `bind_console(local)` on a dot-console `GSConsoleLocal`): `record [seconds]` (alias `profiler_record`), `profiler_stop`, `profiler_report`, `profiler_capture` (start a capture of `profiler_capture_seconds`, or stop the running one) and `profiler_compare [a.json b.json]` (the two newest recordings when no paths are given). `enable_capture_key(KEY_F10)` binds the `profiler_capture` input action to a key when the project has not bound it, so one key starts and stops a capture. A dedicated server uses `GSProfilerServer` instead ([server.md](server.md)).
+Console commands (via `bind_console(local)` on a gs-console `GSConsoleLocal`): `record [seconds]` (alias `profiler_record`), `profiler_stop`, `profiler_report`, `profiler_capture` (start a capture of `profiler_capture_seconds`, or stop the running one) and `profiler_compare [a.json b.json]` (the two newest recordings when no paths are given). `enable_capture_key(KEY_F10)` binds the `profiler_capture` input action to a key when the project has not bound it, so one key starts and stops a capture. A dedicated server uses `GSProfilerServer` instead ([server.md](server.md)).
 
 ## Instrumenting a system
 

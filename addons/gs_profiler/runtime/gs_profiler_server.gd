@@ -5,7 +5,7 @@ extends Node
 ## GameSpice Server and GameSpice Server Query are reached by duck typing through [GSRegistry]; [method install]
 ## parents it under the profiler.
 
-const CHANNEL := "dot.profiler.server"
+const CHANNEL := "gs.profiler.server"
 const PERMISSION := "config"
 const COMMANDS := {
 	"sv_profiler_record": "Record frames for N seconds (default profiler_record_seconds) to the server's profile directory.",
@@ -37,11 +37,11 @@ func install(p: GSProfiler, console: Object = null, server: Object = null, query
 	profiler = p
 	if get_parent() == null:
 		p.add_child(self)
-	_console = console if console != null else _service(&"dot_console")
-	_server = server if server != null else _service(&"dot_server")
-	_query = query if query != null else _service(&"dot_query_source")
+	_console = console if console != null else _service(&"gs_console")
+	_server = server if server != null else _service(&"gs_server")
+	_query = query if query != null else _service(&"gs_query_source")
 	if _console == null or not _console.has_method(&"add_source"):
-		return GSResult.fail(GSError.CODE_UNSUPPORTED, "No dot-server console to register sv_profiler_* on.")
+		return GSResult.fail(GSError.CODE_UNSUPPORTED, "No gs-server console to register sv_profiler_* on.")
 	_move_record_dir()
 	if _console.has_method(&"cvar"):
 		for cv: Object in profiler.config.bind_cvars(Callable(_console, &"cvar")):

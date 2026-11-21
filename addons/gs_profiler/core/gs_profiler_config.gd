@@ -207,7 +207,7 @@ var _cvars: Dictionary = {}
 
 
 func env_prefix() -> String:
-	return "DOT_PROFILER_"
+	return "GS_PROFILER_"
 
 
 func cli_prefix() -> String:
@@ -354,4 +354,4 @@ func set_text(key: String, text: String) -> GSResult:
 func _on_cvar(_old: String, new_value: String, key: String) -> void:
 	var res := set_text(key, new_value)
 	if not res.ok:
-		GSLog.warn("dot.profiler", res.error.message)
+		GSLog.warn("gs.profiler", res.error.message)

@@ -5,7 +5,7 @@ extends RefCounted
 ## written as perf.data beside the report. Says why when it cannot run (no perf, kernel paranoia, not Linux).
 ## The engine's own frames only have names in a build with symbols; docs/deep-mode.md has the details.
 
-const CHANNEL := "dot.profiler"
+const CHANNEL := "gs.profiler"
 ## Samples per second; an odd rate keeps clear of the frame rate.
 const HZ := 999
 

@@ -43,9 +43,9 @@ func _budget() -> void:
 	_check(GSProfilerBudget.id_for("frame", 0) == "frame" and GSProfilerBudget.id_for("physics", 1) == "engine.physics"
 		and GSProfilerBudget.id_for("scripts", 2) == "engine.scripts" and GSProfilerBudget.id_for("physics", 3) == "physics", "engine phases get engine.* ids only near the root")
 	_check(GSProfilerBudget.owner_of("fc.bots") == "fc" and GSProfilerBudget.owner_of("engine.render") == "engine" and GSProfilerBudget.owner_of("solo") == "solo", "the owner is the first dotted segment")
-	GSProfilerBudget.register_owner("fc.net", "dot-net")
+	GSProfilerBudget.register_owner("fc.net", "gs-net")
 	GSProfilerBudget.register_owner("fc", "fatal-contact")
-	_check(GSProfilerBudget.owner_of("fc.net_recv") == "dot-net" and GSProfilerBudget.owner_of("fc.bots") == "fatal-contact", "the longest registered prefix owns an id")
+	_check(GSProfilerBudget.owner_of("fc.net_recv") == "gs-net" and GSProfilerBudget.owner_of("fc.bots") == "fatal-contact", "the longest registered prefix owns an id")
 	var tree := [
 		{"path": "frame", "name": "frame", "depth": 0, "ms": 10.0, "self_ms": 0.0, "calls": 1.0, "p95_ms": 12.0, "max_ms": 20.0},
 		{"path": "frame;process", "name": "process", "depth": 1, "ms": 6.0, "self_ms": 1.0, "calls": 1.0, "p95_ms": 7.0, "max_ms": 9.0},

@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://addons/dot_profiler/tools/dot_profiler_run.gd" id="1"]
+[ext_resource type="Script" path="res://addons/gs_profiler/tools/gs_profiler_run.gd" id="1"]
 
 [node name="GSProfilerRun" type="Node"]
 script = ExtResource("1")

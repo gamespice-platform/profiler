@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare two dot-profiler reports (JSON, version 1 or 2): B minus A in ms per frame.
+"""Compare two gs-profiler reports (JSON, version 1 or 2): B minus A in ms per frame.
 
 Same sections and order as GSProfilerCompare in the addon: frame, phase, system, tree, query, then group
 (count, us per unit), script (self ms) and monitor (average, its own unit) when the reports have them.

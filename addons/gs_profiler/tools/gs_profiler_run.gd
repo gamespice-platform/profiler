@@ -4,7 +4,7 @@ extends Node
 ## `PROFILER {json}` line naming spike causes. Flags: --profile-scene, -warmup, -seconds, -budget;
 ## the rest pass through. Exit 0 once the report is written, 1 when it is not, 2 on bad arguments.
 
-const CHANNEL := "dot.profiler"
+const CHANNEL := "gs.profiler"
 
 var _scene := ""
 var _warmup := 5.0
@@ -36,7 +36,7 @@ func _ready() -> void:
 			"--profile-role": _role = args[i + 1]
 	_quit = not ("--profile-stay" in args)
 	if _scene == "" or not ResourceLoader.exists(_scene):
-		printerr("dot_profiler_run: --profile-scene res://... is required and must exist (got '%s')" % _scene)
+		printerr("gs_profiler_run: --profile-scene res://... is required and must exist (got '%s')" % _scene)
 		get_tree().quit(2)
 		return
 	_run.call_deferred()
@@ -60,7 +60,7 @@ func _run() -> void:
 	var t0 := Time.get_ticks_usec()
 	var packed := load(_scene) as PackedScene
 	if packed == null:
-		printerr("dot_profiler_run: %s is not a scene" % _scene)
+		printerr("gs_profiler_run: %s is not a scene" % _scene)
 		get_tree().quit(2)
 		return
 	var inst := packed.instantiate()
@@ -72,12 +72,12 @@ func _run() -> void:
 	await get_tree().create_timer(_warmup, true, false, true).timeout
 	var started := _prof.start_recording(_seconds)
 	if not started.ok:
-		printerr("dot_profiler_run: ", started.error.message)
+		printerr("gs_profiler_run: ", started.error.message)
 		get_tree().quit(1)
 		return
 	var res: GSResult = await _prof.recording_finished
 	if not res.ok:
-		printerr("dot_profiler_run: report not written: ", res.error.message)
+		printerr("gs_profiler_run: report not written: ", res.error.message)
 		get_tree().quit(1)
 		return
 	var r: Dictionary = (GSPaths.read_json(res.value) as GSResult).value
@@ -97,7 +97,7 @@ static func perf_line(r: Dictionary, load_s: float) -> Dictionary:
 	return {"p50_ms": r.get("p50_ms", 0.0), "p95_ms": r.get("p95_ms", 0.0), "p99_ms": r.get("p99_ms", 0.0),
 		"stall_ms": r.get("worst_ms", 0.0), "spikes": r.get("spike_count", 0), "frames": r.get("frames", 0),
 		"load_s": load_s, "rss_mb": rss_mb(), "gpu": RenderingServer.get_video_adapter_name(),
-		"resolution": "%dx%d" % [DisplayServer.window_get_size().x, DisplayServer.window_get_size().y], "source": "dot-profiler"}
+		"resolution": "%dx%d" % [DisplayServer.window_get_size().x, DisplayServer.window_get_size().y], "source": "gs-profiler"}
 
 
 ## Resident memory in MB where the OS reports it, else Godot's own static memory.
@@ -114,6 +114,6 @@ static func rss_mb() -> float:
 func _print_perf_report() -> void:
 	var path := _prof.last_perf_path()
 	if path == "":
-		printerr("dot_profiler_run: no perf report was written (profiler_perf_report off?)")
+		printerr("gs_profiler_run: no perf report was written (profiler_perf_report off?)")
 		return
 	print("PERF_REPORT_V1 " + JSON.stringify(JSON.parse_string(FileAccess.get_file_as_string(path))))

@@ -1,4 +1,4 @@
-@icon("res://addons/dot_profiler/icon.svg")
+@icon("res://addons/gs_profiler/icon.svg")
 class_name GSProfiler
 extends Node
 
@@ -6,8 +6,8 @@ extends Node
 ## records reports. Off until profiler_enabled 1; [method bind_console] adds the profiler_* vars.
 ## Systems report through [GSFrameCost]; a frame with none is blamed on the slowest engine phase.
 
-const CHANNEL := "dot.profiler"
-const SERVICE := &"dot_profiler"
+const CHANNEL := "gs.profiler"
+const SERVICE := &"gs_profiler"
 ## A system must be at least this share of a spike to be its cause; below it the engine phase is.
 const CAUSE_SHARE := 0.25
 ## The input action that starts a capture of profiler_capture_seconds, or stops and writes it.

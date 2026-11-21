@@ -203,7 +203,7 @@ func _window() -> void:
 	var win := GSProfilerWindow.of(prof)
 	if win != null:
 		win.pointer_mode_changed.connect(func(on: bool) -> void: seen.append(on))
-	_check(prof.is_menu_open() and win.is_in_group(&"dot_pointer_modal") and win.panel != null and not prof.is_recording(),
+	_check(prof.is_menu_open() and win.is_in_group(&"gs_pointer_modal") and win.panel != null and not prof.is_recording(),
 		"Shift+F10 opens the window as a pointer modal, and does not start a capture")
 	(win.panel.controls["graph_scale_ms"] as SpinBox).value = 40.0
 	_check(is_equal_approx(prof.config.graph_scale_ms, 40.0) and GSProfilerConfig.UI_KEYS.has("graph_scale_ms"), "the graph's top is a look option and saved")
@@ -213,7 +213,7 @@ func _window() -> void:
 	var opened := prof.toggle_menu()
 	var closed := not prof.toggle_menu()
 	await get_tree().process_frame
-	_check(opened and closed and get_tree().get_nodes_in_group(&"dot_pointer_modal").is_empty(), "toggle_menu opens and closes, leaving nothing behind")
+	_check(opened and closed and get_tree().get_nodes_in_group(&"gs_pointer_modal").is_empty(), "toggle_menu opens and closes, leaving nothing behind")
 	prof.queue_free()
 	await get_tree().process_frame
 	_sections += 1

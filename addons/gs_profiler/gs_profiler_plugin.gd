@@ -5,7 +5,7 @@ extends EditorPlugin
 
 
 func _enter_tree() -> void:
-	add_custom_type("GSProfiler", "Node", load("res://addons/dot_profiler/runtime/dot_profiler.gd"), null)
+	add_custom_type("GSProfiler", "Node", load("res://addons/gs_profiler/runtime/gs_profiler.gd"), null)
 
 
 func _exit_tree() -> void:

@@ -81,7 +81,7 @@
           "id": { "type": "string" },
           "parent": { "type": "string" },
           "path": { "type": "string", "description": "The profiler tree path the row came from, frames joined by ';' (one id can appear under two parents)." },
-          "addon": { "type": "string", "description": "Addon or game the id is attributed to (dot-net, dot-player-controller, game)." },
+          "addon": { "type": "string", "description": "Addon or game the id is attributed to (gs-net, gs-player-controller, game)." },
           "ms_per_frame": { "type": "number" },
           "self_ms_per_frame": { "type": "number" },
           "pct_frame": { "type": "number", "description": "Percent of the average frame." },

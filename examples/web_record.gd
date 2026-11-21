@@ -1,7 +1,7 @@
 extends Control
 
 ## Record and Stop through the settings panel in a browser, and whether the written report is still there after a reload.
-## `?press=1` presses Record, waits, presses Stop; any load publishes `window.dotWeb.published.prof` (JSON) = {recent, saved, failures, web} for a driver.
+## `?press=1` presses Record, waits, presses Stop; any load publishes `window.gsWeb.published.prof` (JSON) = {recent, saved, failures, web} for a driver.
 
 const DIR := "user://profiler_web"
 

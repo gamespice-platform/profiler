@@ -10,7 +10,7 @@ metadata={
 
 [deps]
 
-source_file="res://addons/dot_profiler/icon.svg"
+source_file="res://addons/gs_profiler/icon.svg"
 dest_files=["res://.godot/imported/icon.svg-2517596738db649c83f98ec266262ba3.ctex"]
 
 [params]

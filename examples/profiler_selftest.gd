@@ -191,7 +191,7 @@ func _live() -> void:
 	prof.config.record_dir = DIR
 	prof.config.warn_every_s = 100.0
 	add_child(prof)
-	_check(GSRegistry.get_service(GSProfiler.SERVICE) == prof, "the profiler registers itself as dot_profiler")
+	_check(GSRegistry.get_service(GSProfiler.SERVICE) == prof, "the profiler registers itself as gs_profiler")
 	_check(not prof.is_watching() and not GSFrameCost.enabled, "nothing is watched while off")
 	var spikes: Array = []
 	prof.spike.connect(func(info: Dictionary) -> void: spikes.append(info))
@@ -279,7 +279,7 @@ func _server() -> void:
 	add_child(prof)
 	var ctl := GSProfilerServer.new()
 	var res := ctl.install(prof, console, server, server.query_source)
-	_check(res.ok and ctl.get_parent() == prof, "installs on a dot-server console under the profiler: %s" % [res.error.message if not res.ok else ""])
+	_check(res.ok and ctl.get_parent() == prof, "installs on a gs-server console under the profiler: %s" % [res.error.message if not res.ok else ""])
 	_check(ctl.names().size() == 9 and Array(ctl.names()).all(func(n: String) -> bool: return console.has_name(n)), "every sv_profiler_* command is registered")
 	_check(console.find_cvar("profiler_record_dir") != null and console.find_cvar("profiler_sample_hz") != null, "profiler_record_dir and profiler_sample_hz are server cvars")
 	_check(prof.config.record_dir == logs.path_join("profiles"), "recordings go under the server's log directory: %s" % prof.config.record_dir)

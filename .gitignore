@@ -3,24 +3,24 @@
 /android/
 
 # The addons this one uses are separate repositories. For local development, symlink them:
-#   ln -s ../../dot-core/addons/dot_core addons/dot_core
-# dot_core is the addon's only dependency; the menu demo also links dot-menu and its own.
-/addons/dot_core
-/addons/dot_menu
-/addons/dot_ui
-/addons/dot_input
-/addons/dot_settings
-/addons/dot_profile
-# The server suite section uses a real dot-server console and dot-server-query snapshot.
-/addons/dot_server
-/addons/dot_server_query
+#   ln -s ../../gs-core/addons/gs_core addons/gs_core
+# gs_core is the addon's only dependency; the menu demo also links gs-menu and its own.
+/addons/gs_core
+/addons/gs_menu
+/addons/gs_ui
+/addons/gs_input
+/addons/gs_settings
+/addons/gs_profile
+# The server suite section uses a real gs-server console and gs-server-query snapshot.
+/addons/gs_server
+/addons/gs_server_query
 # Never tracked: whatever else a tool links here belongs to that tool's run.
-/addons/dot_auth
-/addons/dot_cloud
-/addons/dot_moderation
-/addons/dot_sql
-/addons/dot_stats
-/addons/dot_voice
+/addons/gs_auth
+/addons/gs_cloud
+/addons/gs_moderation
+/addons/gs_sql
+/addons/gs_stats
+/addons/gs_voice
 
 # Rendered frames are looked at, not kept.
 /screenshots/

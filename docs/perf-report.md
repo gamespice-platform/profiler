@@ -21,11 +21,11 @@ Lists are cut to `profiler_perf_top` rows (default 25; `0` keeps every row). Not
 
 ## Naming budget groups
 
-A budget `id` is the name a game gave `GSFrameCost.add` (`fc.bots`, `fc.net_recv`); the engine's phases are `engine.process`, `engine.physics`, `engine.render`, `engine.wait`, and the whole frame is `frame`. Name systems `<owner>.<what>`: the first dotted segment is the addon or game that owns it. `GSProfilerBudget.register_owner("fc.net", "dot-net")` says a longer prefix belongs elsewhere (longest prefix wins). `path` is the tree path (`frame;engine.process;fc.bots`), because one id can appear under two parents.
+A budget `id` is the name a game gave `GSFrameCost.add` (`fc.bots`, `fc.net_recv`); the engine's phases are `engine.process`, `engine.physics`, `engine.render`, `engine.wait`, and the whole frame is `frame`. Name systems `<owner>.<what>`: the first dotted segment is the addon or game that owns it. `GSProfilerBudget.register_owner("fc.net", "gs-net")` says a longer prefix belongs elsewhere (longest prefix wins). `path` is the tree path (`frame;engine.process;fc.bots`), because one id can appear under two parents.
 
 ## How a new game plugs in
 
-1. Nothing for the basics: every recording the profiler writes also writes a perf report. Set `profiler_perf_game_id` (cvar, `DOT_PROFILER_PERF_GAME_ID`, `--profiler-perf-game-id`) or the project name is used. Role is `server` on a headless run, else `client`; `profiler_perf_role` overrides.
+1. Nothing for the basics: every recording the profiler writes also writes a perf report. Set `profiler_perf_game_id` (cvar, `GS_PROFILER_PERF_GAME_ID`, `--profiler-perf-game-id`) or the project name is used. Role is `server` on a headless run, else `client`; `profiler_perf_role` overrides.
 2. Name systems `<owner>.<what>` when calling `GSFrameCost.add`.
 3. Say what the run was: `profiler.set_perf_option("map", "dust")`, `"bots"`, `"players"`, `"tags"` (a dictionary of anything else).
 4. Network cost: where a message is sent or read, `GSProfilerNetCost.add(&"snapshot", GSProfilerNetCost.OUT, bytes)` (and `IN`). One bool test when no recording runs.
@@ -47,7 +47,7 @@ With `profiler_perf_trace` on (the default) each perf report is joined by `perf-
 
 ## Uploading
 
-Set `profiler_perf_upload_url` (cvar, `DOT_PROFILER_PERF_UPLOAD_URL`, `--profiler-perf-upload-url`) to Nightly's base URL and a finished perf report plus its folded stacks is POSTed to `/api/perf/ingest` (JSON envelope `{report, folded}`, scope in the query). It is off when the URL is empty. The Bearer token is read from the environment variable `NIGHTLY_PERF_TOKEN` or the first line of the file named by `profiler_perf_upload_token_file`; it has no cvar and no command-line form (argv shows in process lists), is only sent in the Authorization header and is never logged. The upload uses HTTPRequest, so it works in a web export when the panel allows the page's origin. The result arrives on the `perf_uploaded(ok, status, message)` signal and in the log; a failure is reported, never retried.
+Set `profiler_perf_upload_url` (cvar, `GS_PROFILER_PERF_UPLOAD_URL`, `--profiler-perf-upload-url`) to Nightly's base URL and a finished perf report plus its folded stacks is POSTed to `/api/perf/ingest` (JSON envelope `{report, folded}`, scope in the query). It is off when the URL is empty. The Bearer token is read from the environment variable `NIGHTLY_PERF_TOKEN` or the first line of the file named by `profiler_perf_upload_token_file`; it has no cvar and no command-line form (argv shows in process lists), is only sent in the Authorization header and is never logged. The upload uses HTTPRequest, so it works in a web export when the panel allows the page's origin. The result arrives on the `perf_uploaded(ok, status, message)` signal and in the log; a failure is reported, never retried.
 
 `python3 tools/perf_upload.py perf-<stamp>.json --url <nightly> [--folded rec.folded] [--token-file path]` does the same from a shell or CI (token from the environment or the file, never an argument); `tools/perf_upload_test.py` checks it against a local server.
 
@@ -58,4 +58,4 @@ Set `profiler_perf_upload_url` (cvar, `DOT_PROFILER_PERF_UPLOAD_URL`, `--profile
 ## Known gaps
 
 - Real per-material GPU time: the engine has no such timer, so `est_gpu_ms` (and `est_cost`, draws plus triangles over 1000, where no GPU time was measured) is an estimate, labelled as one. Measured passes are not available on web or Compatibility.
-- Per-class network cost from `dot-net` is reported through `GSNetCostProbe` (found by name, no dependency). Message types dot-net does not send through its manager (a game's own transport) still need the step 4 call.
+- Per-class network cost from `gs-net` is reported through `GSNetCostProbe` (found by name, no dependency). Message types gs-net does not send through its manager (a game's own transport) still need the step 4 call.

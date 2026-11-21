@@ -72,3 +72,21 @@ static func send(parent: Node, req: Dictionary, done: Callable) -> bool:
 		done.call(false, 0, "request not started (error %d)" % err)
 		return false
 	return true
+
+
+## Reads the saved perf report at [param path] back and POSTs it with [param folded] to config.perf_upload_url
+## (docs/perf-report.md "Uploading"). A missing token is warned about, never printed. [param done] gets (ok, status, message).
+static func upload_report(parent: Node, config: DotProfilerConfig, path: String, folded: String, channel: StringName, done: Callable) -> void:
+	var perf: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if not perf is Dictionary:
+		DotLog.warn(channel, "perf upload skipped: cannot read %s back" % path)
+		return
+	var tok := token(config.perf_upload_token_file)
+	if tok == "":
+		DotLog.warn(channel, "perf upload sent without a token: set %s or profiler_perf_upload_token_file" % TOKEN_ENV)
+	send(parent, request(config.perf_upload_url, perf, folded, tok), func(ok: bool, status: int, message: String) -> void:
+		if ok:
+			DotLog.info(channel, "perf report uploaded (HTTP %d)" % status)
+		else:
+			DotLog.warn(channel, "perf upload failed: %s" % message)
+		done.call(ok, status, message))

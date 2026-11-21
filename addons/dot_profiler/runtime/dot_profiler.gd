@@ -240,7 +240,7 @@ func stop_recording() -> DotResult:
 		var folded := _session.folded() if _session != null else ""
 		_last_perf = DotProfilerPerfReport.save(get_tree(), config, report, net_rows, load_rows, opts, CHANNEL, signal_rows, folded)
 		if _last_perf != "" and config.perf_upload_url != "":
-			_upload(_last_perf, folded)
+			DotProfilerUpload.upload_report(self, config, _last_perf, folded, CHANNEL, perf_uploaded.emit)
 	_gpu = null
 	if _ticks != null:
 		_ticks.queue_free()
@@ -255,25 +255,6 @@ func stop_recording() -> DotResult:
 		DotLog.warn(CHANNEL, "profile not saved: %s" % res.error.message)
 	recording_finished.emit(res)
 	return res
-
-
-## POSTs the saved perf report at [param path] and [param folded] to config.perf_upload_url (docs/perf-report.md "Uploading").
-## The token comes from DotProfilerUpload.token (environment or a file); a missing one is warned about, never printed.
-func _upload(path: String, folded: String) -> void:
-	var perf: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
-	if not perf is Dictionary:
-		DotLog.warn(CHANNEL, "perf upload skipped: cannot read %s back" % path)
-		return
-	var tok := DotProfilerUpload.token(config.perf_upload_token_file)
-	if tok == "":
-		DotLog.warn(CHANNEL, "perf upload sent without a token: set %s or profiler_perf_upload_token_file" % DotProfilerUpload.TOKEN_ENV)
-	var req := DotProfilerUpload.request(config.perf_upload_url, perf, folded, tok)
-	DotProfilerUpload.send(self, req, func(ok: bool, status: int, message: String) -> void:
-		if ok:
-			DotLog.info(CHANNEL, "perf report uploaded (HTTP %d)" % status)
-		else:
-			DotLog.warn(CHANNEL, "perf upload failed: %s" % message)
-		perf_uploaded.emit(ok, status, message))
 
 
 ## Adds a key to the next perf reports' options: map, bots, players, tags (docs/perf-report.md "How a new game plugs in").
@@ -382,37 +363,12 @@ func remove_counter(group: String) -> void:
 
 ## Nodes in the tree by class (a script's class_name when it has one): {name: count}.
 func census() -> Dictionary:
-	var out := {}
-	var stack: Array[Node] = [get_tree().root]
-	while not stack.is_empty():
-		var n: Node = stack.pop_back()
-		var key := n.get_class()
-		var sc := n.get_script() as Script
-		if sc != null and sc.get_global_name() != &"":
-			key = String(sc.get_global_name())
-		out[key] = int(out.get(key, 0)) + 1
-		stack.append_array(n.get_children(true))
-	return out
+	return DotProfilerCensus.count(get_tree().root)
 
 
 ## Two [method census] results as {start_nodes, end_nodes, classes: [{class, start, end, delta}]}, biggest change first.
 static func census_diff(a: Dictionary, b: Dictionary) -> Dictionary:
-	var rows: Array = []
-	var total_a := 0
-	var total_b := 0
-	var names := a.keys()
-	for k: Variant in b:
-		if not a.has(k):
-			names.append(k)
-	for k: Variant in names:
-		var x: int = a.get(k, 0)
-		var y: int = b.get(k, 0)
-		total_a += x
-		total_b += y
-		rows.append({"class": String(k), "start": x, "end": y, "delta": y - x})
-	rows.sort_custom(func(p: Dictionary, q: Dictionary) -> bool:
-		return absi(p.delta) > absi(q.delta) or (p.delta == q.delta and p.end > q.end))
-	return {"start_nodes": total_a, "end_nodes": total_b, "classes": rows}
+	return DotProfilerCensus.diff(a, b)
 
 
 func _on_node_added(_node: Node) -> void:

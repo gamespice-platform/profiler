@@ -20,6 +20,9 @@ heavy -- timeout 120 godot --headless --path . res://addons/dot_profiler/tools/d
 | `--profile-budget` | 33 | Spike threshold in ms. |
 | `--profile-out` | user://profiles | Report directory. |
 | `--profile-stay` | off | Do not quit when done. |
+| `--profile-game`, `--profile-map`, `--profile-bots`, `--profile-role` | (none) | What the run was, written into the perf report (`game_id`, `map`, `bots`, `role`). |
+
+The perf report v1 of the run (docs/perf-report.md) is also printed on one line as `PERF_REPORT_V1 {json}`, so a caller on another box gets it from stdout.
 
 The scene's own arguments pass through untouched. Exit 0 when the report is written, 1 when it is not, 2 on bad arguments.
 

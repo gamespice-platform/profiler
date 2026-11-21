@@ -3,8 +3,8 @@ extends Node
 ## The perf report v1: budget ids and addon owners, per-class network cost, loads, a live recording that writes
 ## perf-<stamp>.json, and that file against the required keys (and the schema when tools/perf_report_check.py runs).
 
-const SECTIONS := 4
-const CHECKS := 23
+const SECTIONS := 7
+const CHECKS := 37
 const DIR := "user://profiler_perf_selftest"
 
 var _sections := 0
@@ -17,6 +17,9 @@ func _ready() -> void:
 	_budget()
 	_net()
 	_loads()
+	_signals()
+	_baseline()
+	_caps()
 	await _live()
 	var _c := DotPaths.remove_tree(DIR)
 	print("profiler_perf_selftest: %d of %d sections, %d checks (want %d), %d failed" % [_sections, SECTIONS, _checks, CHECKS, _failed])
@@ -104,6 +107,8 @@ func _live() -> void:
 	prof.set_perf_option("bots", 4)
 	var _s := prof.start_recording(0.3)
 	DotProfilerNetCost.add(&"snap", DotProfilerNetCost.OUT, 64)
+	DotProfilerSignals.note(&"sig", 2)
+	DotProfilerSignals.note(&"sig", 4)
 	var res: DotResult = await prof.recording_finished
 	_check(res.ok and prof.last_perf_path() != "", "a recording writes a perf report")
 	var p: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(prof.last_perf_path()))
@@ -112,6 +117,9 @@ func _live() -> void:
 	_check(int(p.frame.count) > 0 and p.frame.ms.has("p99") and p.frame.ms.has("max"), "frame percentiles are written")
 	_check(p.has("network") and p.network.by_class[0].class == "snap" and p.network.by_class[0].bytes == 64, "network cost per class is written")
 	_check(p.has("render") and p.render.has("top_draw") and p.render.top_draw.size() > 0, "the draw scan lists meshes and materials")
+	_check(int(p.schema_minor) == 1 and p.render.has("cost_estimate") and p.render.top_draw[0].has("est_cost"), "schema_minor and the labelled render cost estimate are written")
+	_check(p.has("budget") and p.budget[0].has("path"), "budget rows carry their path")
+	_check(p.has("signals") and p.signals.fanout[0].signal == "sig" and p.signals.fanout[0].deliveries == 6, "signal fan-out is written")
 	_check(p.has("budget") and p.has("hitches") and p.has("memory"), "budget, hitches and memory sections exist")
 	var bad := DotProfilerPerfReport.problems({"schema": "x"})
 	_check(bad.size() >= 5, "a bad report names what is missing")
@@ -119,4 +127,58 @@ func _live() -> void:
 	prof.queue_free()
 	mi.queue_free()
 	await get_tree().process_frame
+	_sections += 1
+
+
+func _signals() -> void:
+	DotProfilerSignals.note(&"a", 3)
+	_check(DotProfilerSignals.rows(1.0).is_empty(), "signal counts do nothing while off")
+	DotProfilerSignals.begin()
+	DotProfilerSignals.note(&"a", 3)
+	DotProfilerSignals.note(&"a", 1)
+	DotProfilerSignals.note(&"b", 1)
+	var rows := DotProfilerSignals.end(2.0)
+	_check(rows.size() == 2 and rows[0].signal == "a" and rows[0].emits == 2 and rows[0].deliveries == 4 and rows[0].receivers_max == 3
+		and is_equal_approx(rows[0].receivers_avg, 2.0) and is_equal_approx(rows[0].deliveries_per_s, 2.0), "fan-out sums emits, receivers and deliveries")
+	_check(DotProfilerSignals.rows(2.0, 1).size() == 1, "signal top limits rows")
+	var n := Node.new()
+	n.add_user_signal("hit")
+	n.connect("hit", func() -> void: pass)
+	n.connect("hit", func() -> void: pass)
+	DotProfilerSignals.begin()
+	DotProfilerSignals.emitted(n, &"hit")
+	var r2 := DotProfilerSignals.end(1.0)
+	_check(r2.size() == 1 and r2[0].receivers_max == 2 and r2[0].signal == "Node.hit", "emitted reads the connection count")
+	n.free()
+	_sections += 1
+
+
+func _baseline() -> void:
+	var ref := {"made_utc": "t0", "build": {"commit": "aaa"}, "frame": {"ms": {"avg": 10.0, "p99": 20.0}, "fps_avg": 100.0},
+		"budget": [{"id": "fc.bots", "ms_per_frame": 2.0}], "network": {"by_class": [{"class": "snap", "dir": "out", "bytes_per_s": 1000.0}]}}
+	var cur := {"frame": {"ms": {"avg": 12.0, "p99": 20.2}, "fps_avg": 90.0}, "budget": [{"id": "fc.bots", "ms_per_frame": 1.0}],
+		"network": {"by_class": [{"class": "snap", "dir": "out", "bytes_per_s": 1000.0}]}}
+	var d := DotProfilerPerfBaseline.diff(cur, ref, 5.0, "ref.json")
+	var keys := []
+	for c: Dictionary in d.changed:
+		keys.append(c.key)
+	_check(d.against == "ref.json" and d.against_commit == "aaa" and d.noise_pct == 5.0 and not keys.has("frame.ms.p99") and not keys.has("net.snap.out"), "rows inside the noise floor are dropped")
+	_check(keys.has("frame.ms.avg") and keys.has("frame.fps_avg") and keys.has("budget.fc.bots") and d.worse == 2 and d.better == 1, "rows beyond the noise floor are listed with a direction (fps down is worse)")
+	_check(DotProfilerPerfBaseline.diff(cur, ref, 0.0, "x").changed.size() == 4, "noise 0 lists every difference")
+	_check(not DotProfilerPerfBaseline.load_report("user://nope.json").ok, "a missing baseline fails loudly")
+	_sections += 1
+
+
+func _caps() -> void:
+	var cfg := DotProfilerConfig.new()
+	cfg.sample_hz = 5000.0
+	cfg.worst_frames = 100000
+	cfg.script_top = 1000000
+	cfg.perf_top = 100000
+	_check(cfg.validate().ok, "large values are not capped")
+	cfg.perf_signal_top = -1
+	_check(not cfg.validate().ok, "a negative value fails loudly")
+	cfg.perf_signal_top = 0
+	cfg.perf_baseline_noise_pct = -1.0
+	_check(not cfg.validate().ok, "a negative noise floor fails loudly")
 	_sections += 1

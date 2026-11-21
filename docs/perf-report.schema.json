@@ -1,13 +1,14 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://gamespice.dev/schemas/perf-report/1.json",
-  "title": "GameSpice performance report v1",
-  "description": "One performance capture of one game process (a client or a server, native or web). Written by DotProfilerPerfReport; read by Nightly's Performance tab and by tools/perf_report_check.py. Keys are only ever added within a schema_version; a key that changes meaning bumps schema_version. Every list named top_* is cut to the profiler_perf_top parameter, where 0 means unlimited; a cut list says so in `truncated`.",
+  "title": "GameSpice performance report v1.1",
+  "description": "One performance capture of one game process (a client or a server, native or web). Written by DotProfilerPerfReport; read by Nightly's Performance tab and by tools/perf_report_check.py. Version 1.1 (schema_minor 1) is additive over 1.0, so every 1.0 report stays valid. Keys are only ever added within a schema_version; a key that changes meaning bumps schema_version. Every list named top_* is cut to the profiler_perf_top parameter, where 0 means unlimited; a cut list says so in `truncated`.",
   "type": "object",
   "required": ["schema", "schema_version", "game_id", "build", "platform", "role", "scene", "duration_s", "frame"],
   "properties": {
     "schema": { "const": "gamespice.perf-report" },
     "schema_version": { "const": 1 },
+    "schema_minor": { "type": "integer", "minimum": 0, "description": "Additive revision inside schema_version; absent means 0 (version 1.0)." },
     "made_utc": { "type": "string", "description": "ISO 8601 UTC time the report was written." },
     "game_id": { "type": "string", "minLength": 1, "description": "Stable id of the game, e.g. the repo name or pack id (fatal-contact, playlot). Never a display name." },
     "build": {
@@ -79,6 +80,7 @@
         "properties": {
           "id": { "type": "string" },
           "parent": { "type": "string" },
+          "path": { "type": "string", "description": "The profiler tree path the row came from, frames joined by ';' (one id can appear under two parents)." },
           "addon": { "type": "string", "description": "Addon or game the id is attributed to (dot-net, dot-player-controller, game)." },
           "ms_per_frame": { "type": "number" },
           "self_ms_per_frame": { "type": "number" },
@@ -137,6 +139,7 @@
         "texture_mb": { "type": "number" },
         "buffer_mb": { "type": "number" },
         "video_mb": { "type": "number" },
+        "cost_estimate": { "type": "object", "description": "Present when top_draw rows carry est_cost: an ESTIMATE, not a measurement.", "properties": { "method": { "type": "string" }, "note": { "type": "string" } } },
         "top_draw": {
           "type": "array",
           "description": "Draw/triangle attribution top-N from a snapshot at the end of the capture. kind: material, mesh or node_class.",
@@ -149,7 +152,8 @@
               "instances": { "type": "integer" },
               "surfaces": { "type": "integer" },
               "triangles": { "type": "integer" },
-              "est_draws": { "type": "integer", "description": "Instances x surfaces: an upper bound on draw calls before batching and culling." }
+              "est_draws": { "type": "integer", "description": "Instances x surfaces: an upper bound on draw calls before batching and culling." },
+              "est_cost": { "type": "number", "description": "ESTIMATE of relative cost where GPU time per material is unavailable: est_draws plus triangles weighted per draw call. Compare rows with each other, not with milliseconds." }
             }
           }
         }
@@ -175,6 +179,17 @@
           "type": "array",
           "description": "Named allocation counters a game reported (DotProfilerCounts): what creates objects, per frame.",
           "items": { "type": "object", "required": ["name", "total"], "properties": { "name": { "type": "string" }, "total": { "type": "integer" }, "per_frame": { "type": "number" } } }
+        }
+      }
+    },
+
+    "signals": {
+      "type": "object",
+      "description": "Signal fan-out from DotProfilerSignals: emits times receivers, most deliveries first; cut to profiler_perf_signal_top.",
+      "properties": {
+        "fanout": {
+          "type": "array",
+          "items": { "type": "object", "required": ["signal", "emits", "deliveries"], "properties": { "signal": { "type": "string" }, "emits": { "type": "integer", "minimum": 0 }, "receivers_max": { "type": "integer", "minimum": 0 }, "receivers_avg": { "type": "number" }, "deliveries": { "type": "integer", "minimum": 0 }, "deliveries_per_s": { "type": "number" } } }
         }
       }
     },
@@ -245,13 +260,18 @@
 
     "baseline": {
       "type": "object",
-      "description": "'What changed since the last baseline': rows that moved beyond the noise floor.",
+      "description": "What changed since the reference report (profiler_perf_baseline): rows that moved beyond the noise floor. 1.1 adds the reference's commit and time, counts and a direction per row.",
       "properties": {
         "against": { "type": "string", "description": "Commit or file the reference report came from." },
         "noise_pct": { "type": "number" },
+        "against_commit": { "type": "string" },
+        "against_made_utc": { "type": "string" },
+        "compared": { "type": "integer", "minimum": 0, "description": "Numbers compared, changed or not." },
+        "worse": { "type": "integer", "minimum": 0 },
+        "better": { "type": "integer", "minimum": 0 },
         "changed": {
           "type": "array",
-          "items": { "type": "object", "required": ["key", "a", "b"], "properties": { "key": { "type": "string" }, "a": { "type": "number" }, "b": { "type": "number" }, "delta": { "type": "number" }, "pct": { "type": "number" } } }
+          "items": { "type": "object", "required": ["key", "a", "b"], "properties": { "key": { "type": "string" }, "a": { "type": "number" }, "b": { "type": "number" }, "delta": { "type": "number" }, "pct": { "type": "number" }, "direction": { "enum": ["worse", "better"] } } }
         }
       }
     },

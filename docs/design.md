@@ -48,18 +48,18 @@ Exported defaults < JSON file (`config_file`) < environment (`DOT_PROFILER_*`) <
 | `profiler_sample_hz` | 1 | Metric samples per second written into a recording's `samples` (memory and counts; on a server also bytes, players and bots); 0 takes none. Every frame is recorded regardless. |
 | `profiler_trace` | 1 | While recording, time each `DotFrameCost` span so the report has a call tree. |
 | `profiler_monitors` | 1 | While recording, read the engine monitors every frame. |
-| `profiler_worst_frames` | 5 | Slowest frames kept whole, with their tree (0 to 50). |
+| `profiler_worst_frames` | 5 | Slowest frames kept whole, with their tree (0 keeps none; no upper limit). |
 | `profiler_capture_seconds` | 10 | Length of a capture started by the capture key or `profiler_capture`. |
 | `profiler_deep` | 0 | Also sample native stacks with perf while recording. |
 | `profiler_timeline` | 0 | While recording, keep each frame's ms and flag frames at 2x the running average (and 2 ms above it) or over budget, with their top self spans, systems and phases. |
 | `profiler_render_time` | 1 | While recording, read the viewport's measured render cpu and gpu ms every frame (`monitors.render_cpu_ms`, `render_gpu_ms`). |
-| `profiler_suspects_top` | 10 | Rows in the suspects table that opens the report: spans by self time, costliest first (0 to 100; 0 leaves out suspects and functions). Needs `profiler_trace`. |
+| `profiler_suspects_top` | 10 | Rows in the suspects table that opens the report: spans by self time, costliest first (no upper limit; 0 leaves out suspects and functions). Needs `profiler_trace`. |
 | `profiler_per_unit` | "" | What costs are divided by, e.g. `players`: a counter from `DotProfiler.add_counter` or a SceneTree group, read every frame while recording whether or not `profiler_groups` lists it. |
 | `profiler_unit_target_us` | 0 | Microseconds one unit may cost per physics tick; the suspects show their share of it. 0 is no target. |
 | `profiler_render_detail` | 0 | While recording, also read texture and buffer memory, resources, the viewport's draw calls, primitives and objects split by visible, shadow and canvas, and render cpu and gpu ms. |
 | `profiler_groups` | "" | Comma-separated `group` or `group:system-prefix`, counted every frame while recording: a SceneTree group, or a counter the game registers with `DotProfiler.add_counter(group, callable, prefix)`, which is only read when its group is listed here. With a prefix, the report gives each matching system's us per unit. |
 | `profiler_census` | 0 | Count nodes by class (or script `class_name`) when a recording starts and stops; the report lists the classes that changed most. |
-| `profiler_script_top` | 0 | GDScript functions listed by self time, with total time and calls (0 to 500). Needs the game started with `-d`, because the engine's script profiler only runs under its local debugger; without it the report says so. Costs a lot while on. |
+| `profiler_script_top` | 0 | GDScript functions listed by self time, with total time and calls (no upper limit; 0 is off). Needs the game started with `-d`, because the engine's script profiler only runs under its local debugger; without it the report says so. Costs a lot while on. |
 | `profiler_script_buckets` | "" | Sums script functions into named buckets: comma-separated `name=part|part`, matched against script paths and function names; the rest is `other`. |
 | `profiler_query` | 0 | Publish `profiler_ms`, `profiler_spikes`, `profiler_period`, `profiler_static_mb` and `profiler_nodes` in the server query's game section. Off because the query is public. |
 

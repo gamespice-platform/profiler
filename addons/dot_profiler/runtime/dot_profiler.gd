@@ -156,6 +156,7 @@ func start_recording(seconds: float = 0.0) -> DotResult:
 	_session.begin()
 	DotProfilerCounts.begin()
 	DotProfilerNetCost.begin()
+	DotProfilerSignals.begin()
 	DotProfilerLoads.begin(config.perf_load_min_ms)
 	if not get_tree().node_added.is_connected(_on_node_added):
 		get_tree().node_added.connect(_on_node_added)
@@ -200,12 +201,13 @@ func stop_recording() -> DotResult:
 		_census = census_diff(_census_start, census())
 	var net_rows := DotProfilerNetCost.end(_rec_seconds, config.perf_top)
 	var load_rows := DotProfilerLoads.end(config.perf_top)
+	var signal_rows := DotProfilerSignals.end(_rec_seconds, config.perf_signal_top)
 	var report := build_report()
 	_force_render = false
 	var res := DotProfilerReport.write(report, config.record_dir, config.keep_recordings,
 		_session.folded() if _session != null else "")
 	if config.perf_report and res.ok:
-		_last_perf = DotProfilerPerfReport.save(get_tree(), config, report, net_rows, load_rows, _perf_opts, CHANNEL)
+		_last_perf = DotProfilerPerfReport.save(get_tree(), config, report, net_rows, load_rows, _perf_opts, CHANNEL, signal_rows)
 	if _ticks != null:
 		_ticks.queue_free()
 		_ticks = null

@@ -50,7 +50,7 @@ func _config() -> void:
 	var b := DotProfilerConfig.parse_buckets("motor=motor|move,weapons=weapon")
 	_check(b.size() == 2 and (b[0].match as PackedStringArray).size() == 2 and b[1].name == "weapons", "script buckets parse as name and parts")
 	_check(c.set_text("script_top", "40").ok and c.script_top == 40, "script_top is set from console text")
-	_check(not c.set_text("script_top", "900").ok and c.script_top == 40, "an out-of-range script_top is refused and put back")
+	_check(not c.set_text("script_top", "-1").ok and c.script_top == 40, "a negative script_top is refused and put back")
 	_check(not c.set_text("script_buckets", "=x").ok and not c.set_text("groups", ":fc.bot").ok, "a bucket or group without a name is refused")
 	_sections += 1
 

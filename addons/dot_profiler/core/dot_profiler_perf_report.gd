@@ -1,7 +1,7 @@
 class_name DotProfilerPerfReport
 extends RefCounted
 
-## The stable machine-readable report, version 1 (docs/perf-report.md, schema docs/perf-report.schema.json): one
+## The stable machine-readable report, version 1.1 (docs/perf-report.md, schema docs/perf-report.schema.json): one
 ## recording's frame percentiles, budget rows with addon attribution, hitches with their responsible systems, render,
 ## memory, network per class, physics, script split and loads. [method build] converts the profiler's own report
 ## (DotProfilerReport) plus what [param opts] adds; [method write] saves [code]perf-<stamp>.json[/code];
@@ -9,10 +9,14 @@ extends RefCounted
 
 const SCHEMA := "gamespice.perf-report"
 const VERSION := 1
+## Additive revisions inside version 1: 1 adds budget path, signals.fanout, the richer baseline and render cost estimates. A reader of 1.0 still reads 1.1.
+const MINOR := 1
+## Triangles one draw call is weighted as in a render cost estimate.
+const TRIS_PER_DRAW := 1000
 
 
 ## The perf report for [param r] (a DotProfilerReport). [param opts]: game_id, role, platform, top (0 = all rows),
-## map, bots, players, tags, network (rows), render_top (rows), loading (rows), wasm_heap_mb, baseline (dict).
+## map, bots, players, tags, network (rows), signals (rows), render_top (rows), render_estimate (bool), loading (rows), wasm_heap_mb, baseline (dict).
 static func build(r: Dictionary, opts: Dictionary) -> Dictionary:
 	var ctx: Dictionary = r.get("context", {})
 	var mach: Dictionary = ctx.get("machine", {})
@@ -23,7 +27,7 @@ static func build(r: Dictionary, opts: Dictionary) -> Dictionary:
 	var frame_ms: float = float(frame_stat.get("avg", 0.0))
 	var budget_ms: float = float(r.get("budget_ms", 0.0))
 	var out := {
-		"schema": SCHEMA, "schema_version": VERSION,
+		"schema": SCHEMA, "schema_version": VERSION, "schema_minor": MINOR,
 		"made_utc": Time.get_datetime_string_from_system(true) + "Z",
 		"game_id": String(opts.get("game_id", "")),
 		"build": {"commit": String(bld.get("commit", "unknown")), "branch": String(bld.get("branch", "")),
@@ -57,6 +61,8 @@ static func build(r: Dictionary, opts: Dictionary) -> Dictionary:
 	out["memory"] = _memory(mon, r, opts)
 	if opts.has("network"):
 		out["network"] = {"by_class": opts.network}
+	if opts.has("signals") and not (opts.signals as Array).is_empty():
+		out["signals"] = {"fanout": opts.signals}
 	var phys := {}
 	for k: String in ["physics_3d_active", "physics_3d_pairs", "physics_3d_islands"]:
 		if mon.has(k):
@@ -109,6 +115,9 @@ static func _render(mon: Dictionary, opts: Dictionary) -> Dictionary:
 			out[k] = (mon[k] as Dictionary).get("avg", 0.0)
 	if opts.has("render_top"):
 		out["top_draw"] = opts.render_top
+		if opts.get("render_estimate", false):
+			out["cost_estimate"] = {"method": "draws + triangles / %d" % TRIS_PER_DRAW,
+				"note": "ESTIMATE, not measured: est_cost weighs each draw call as %d triangles. Used because GPU time per material is unavailable." % TRIS_PER_DRAW}
 	return out
 
 
@@ -168,8 +177,8 @@ static func wasm_heap_mb() -> float:
 
 
 ## The costliest materials, meshes and node classes under [param root]: 3D meshes counted by instance, surfaces and
-## triangles. Walks the tree once (call it at the end of a capture, not per frame). [param top] 0 keeps all.
-static func render_top(root: Node, top: int) -> Array:
+## triangles; [param estimate] adds est_cost (draws plus triangles over [constant TRIS_PER_DRAW], an estimate, not a GPU time) and sorts by it. Walks the tree once (call it at the end of a capture, not per frame). [param top] 0 keeps all.
+static func render_top(root: Node, top: int, estimate: bool = false) -> Array:
 	var mats: Dictionary = {}
 	var meshes: Dictionary = {}
 	var stack: Array[Node] = [root]
@@ -201,7 +210,12 @@ static func render_top(root: Node, top: int) -> Array:
 	var out: Array = mats.values() + meshes.values()
 	for r: Dictionary in out:
 		r["est_draws"] = r.instances * maxi(int(r.surfaces), 1) if r.kind == "mesh" else r.instances
-	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.est_draws > b.est_draws)
+	var key := "est_draws"
+	if estimate:
+		for r: Dictionary in out:
+			r["est_cost"] = r.est_draws + float(r.triangles) / TRIS_PER_DRAW
+		key = "est_cost"
+	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a[key] > b[key])
 	if top > 0 and out.size() > top:
 		out.resize(top)
 	return out
@@ -244,20 +258,29 @@ static func write(p: Dictionary, dir: String) -> DotResult:
 ## Builds, checks and writes the perf report (docs/perf-report.md) for [param report] beside the recording and returns
 ## its path, or "" on failure (logged, not fatal). [param extra] is the game's options (map, bots, players, tags).
 static func save(tree: SceneTree, config: DotProfilerConfig, report: Dictionary, net_rows: Array, load_rows: Array,
-		extra: Dictionary, channel: StringName) -> String:
+		extra: Dictionary, channel: StringName, signal_rows: Array = []) -> String:
 	var opts := {"game_id": config.perf_game_id if config.perf_game_id != "" else String(ProjectSettings.get_setting("application/config/name", "")),
 		"platform": "web" if OS.has_feature("web") else "native", "top": config.perf_top, "loading": load_rows,
 		"role": config.perf_role if config.perf_role != "" else ("server" if DisplayServer.get_name() == "headless" else "client")}
 	if not net_rows.is_empty():
 		opts["network"] = net_rows
+	if not signal_rows.is_empty():
+		opts["signals"] = signal_rows
 	if config.perf_render_scan and tree.current_scene != null:
-		opts["render_top"] = render_top(tree.root, config.perf_top)
+		opts["render_top"] = render_top(tree.root, config.perf_top, config.perf_render_estimate)
+		opts["render_estimate"] = config.perf_render_estimate
 	var heap := wasm_heap_mb()
 	if heap >= 0.0:
 		opts["wasm_heap_mb"] = heap
 	for k: String in extra:
 		opts[k] = extra[k]
 	var perf := build(report, opts)
+	if config.perf_baseline != "":
+		var ref := DotProfilerPerfBaseline.load_report(config.perf_baseline)
+		if ref.ok:
+			perf["baseline"] = DotProfilerPerfBaseline.diff(perf, ref.value, config.perf_baseline_noise_pct, config.perf_baseline)
+		else:
+			DotLog.warn(channel, "perf baseline skipped: %s" % ref.error.message)
 	var bad := problems(perf)
 	if not bad.is_empty():
 		DotLog.warn(channel, "perf report is invalid: %s" % ", ".join(bad))

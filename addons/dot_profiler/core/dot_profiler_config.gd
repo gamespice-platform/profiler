@@ -124,6 +124,18 @@ extends DotConfig
 ## At the end of a recording, walk the scene once and list the materials and meshes that cost the most draws.
 @export var perf_render_scan: bool = false
 
+## A perf report (perf-*.json) every new perf report is compared against; its baseline section lists what moved beyond the noise floor. Empty is off.
+@export var perf_baseline: String = ""
+
+## Percent change below which a baseline row counts as noise; 0 lists every difference.
+@export var perf_baseline_noise_pct: float = 5.0
+
+## Signals listed in the perf report's fan-out table (emits x receivers); 0 keeps every signal.
+@export var perf_signal_top: int = 25
+
+## Estimate a cost per material from draws and triangles where GPU time is unavailable (needs perf_render_scan); labelled an estimate in the report.
+@export var perf_render_estimate: bool = true
+
 ## Asset loads shorter than this many ms are left out of the perf report's loading list; 0 keeps every one.
 @export var perf_load_min_ms: float = 0.0
 
@@ -206,16 +218,18 @@ func validate() -> DotResult:
 		return DotResult.fail(DotError.CODE_INVALID, "profiler_record_seconds must be above 0 and profiler_keep_recordings 1 or more.")
 	if not (record_dir.begins_with("user://") or (record_dir.is_absolute_path() and not record_dir.contains("://"))):
 		return DotResult.fail(DotError.CODE_INVALID, "profiler_record_dir must be under user:// or an absolute path, not '%s'." % record_dir)
-	if sample_hz < 0.0 or sample_hz > 60.0:
-		return DotResult.fail(DotError.CODE_INVALID, "profiler_sample_hz must be 0 to 60.")
-	if worst_frames < 0 or worst_frames > 50 or capture_seconds <= 0.0 or capture_seconds > 3600.0:
-		return DotResult.fail(DotError.CODE_INVALID, "profiler_worst_frames must be 0 to 50 and profiler_capture_seconds above 0, at most 3600.")
-	if suspects_top < 0 or suspects_top > 100 or unit_target_us < 0.0:
-		return DotResult.fail(DotError.CODE_INVALID, "profiler_suspects_top must be 0 to 100 and profiler_unit_target_us 0 or more.")
+	if sample_hz < 0.0:
+		return DotResult.fail(DotError.CODE_INVALID, "profiler_sample_hz must be 0 or more (0 takes no samples).")
+	if worst_frames < 0 or capture_seconds <= 0.0:
+		return DotResult.fail(DotError.CODE_INVALID, "profiler_worst_frames must be 0 or more and profiler_capture_seconds above 0.")
+	if suspects_top < 0 or unit_target_us < 0.0:
+		return DotResult.fail(DotError.CODE_INVALID, "profiler_suspects_top and profiler_unit_target_us must be 0 or more.")
 	if perf_top < 0 or perf_load_min_ms < 0.0 or not ["", "client", "server", "standalone"].has(perf_role):
 		return DotResult.fail(DotError.CODE_INVALID, "profiler_perf_top and profiler_perf_load_min_ms must be 0 or more and profiler_perf_role empty, client, server or standalone.")
-	if script_top < 0 or script_top > 500:
-		return DotResult.fail(DotError.CODE_INVALID, "profiler_script_top must be 0 to 500.")
+	if script_top < 0:
+		return DotResult.fail(DotError.CODE_INVALID, "profiler_script_top must be 0 or more (0 is off).")
+	if perf_baseline_noise_pct < 0.0 or perf_signal_top < 0:
+		return DotResult.fail(DotError.CODE_INVALID, "profiler_perf_baseline_noise_pct and profiler_perf_signal_top must be 0 or more.")
 	for entry in parse_groups(groups):
 		if entry.group == "":
 			return DotResult.fail(DotError.CODE_INVALID, "profiler_groups is 'group' or 'group:prefix', comma-separated; '%s' has an empty name." % groups)

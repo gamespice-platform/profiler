@@ -217,6 +217,7 @@ func _spin(lo: float, hi: float, step: float, value: float) -> SpinBox:
 	var sb := SpinBox.new()
 	sb.min_value = lo
 	sb.max_value = hi
+	sb.allow_greater = true
 	sb.step = step
 	sb.value = value
 	return sb

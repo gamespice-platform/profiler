@@ -17,6 +17,20 @@ class CheckTest(unittest.TestCase):
     def test_valid(self):
         self.assertEqual(pc.validate(OK), [])
 
+    def test_v1_1_additions(self):
+        r = copy.deepcopy(OK)
+        r["schema_minor"] = 1
+        r["budget"][0]["path"] = "frame;fc.bots"
+        r["signals"] = {"fanout": [{"signal": "Node.hit", "emits": 2, "deliveries": 4}]}
+        r["baseline"] = {"against": "x", "noise_pct": 5.0, "worse": 1, "better": 0, "changed": [{"key": "k", "a": 1.0, "b": 2.0, "direction": "worse"}]}
+        r["render"] = {"cost_estimate": {"method": "m", "note": "ESTIMATE"}, "top_draw": [{"kind": "mesh", "name": "m", "instances": 1, "est_cost": 2.5}]}
+        self.assertEqual(pc.validate(r), [])
+        r["baseline"]["changed"][0]["direction"] = "sideways"
+        r["signals"]["fanout"][0].pop("emits")
+        got = "\n".join(pc.validate(r))
+        self.assertIn("direction", got)
+        self.assertIn("missing emits", got)
+
     def test_missing_and_bad(self):
         r = copy.deepcopy(OK)
         del r["game_id"]

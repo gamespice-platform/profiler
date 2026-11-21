@@ -58,7 +58,7 @@ Every report starts with a `context` (OS, CPU, GPU, Godot build, window, tick ra
 | --- | --- |
 | [docs/design.md](docs/design.md) | The pieces, configuration and cvars, instrumenting a system. |
 | [docs/report-format.md](docs/report-format.md) | Report JSON keys, call tree, folded stacks, compare. |
-| [docs/perf-report.md](docs/perf-report.md) | The stable `perf-<stamp>.json` (schema v1): budget ids and addons, hitches, render, memory, network per class, loads; how a new game plugs in. |
+| [docs/perf-report.md](docs/perf-report.md) | The stable `perf-<stamp>.json` (schema v1.1): budget ids and addons, hitches, render with a labelled cost estimate, memory, network per class, signal fan-out, a baseline diff, loads; how a new game plugs in. |
 | [docs/deep-mode.md](docs/deep-mode.md) | Native samples with perf. |
 | [docs/runner.md](docs/runner.md) | The headless runner and its `PERF` line. |
 | [docs/menu.md](docs/menu.md) | The settings menu's Performance section. |

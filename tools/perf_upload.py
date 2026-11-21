@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Uploads a perf report (and its folded stacks) to Nightly's /api/perf/ingest: the CLI twin of DotProfilerUpload.
+"""Uploads a perf report (and its folded stacks) to Nightly's /api/perf/ingest: the CLI twin of GSProfilerUpload.
 
     NIGHTLY_PERF_TOKEN=nps_... python3 tools/perf_upload.py perf-2026....json --url https://nightly.example
     python3 tools/perf_upload.py perf.json --folded rec.folded --token-file ~/.config/nightly/perf-token --url ...

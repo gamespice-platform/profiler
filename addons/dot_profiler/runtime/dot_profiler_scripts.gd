@@ -1,4 +1,4 @@
-class_name DotProfilerScripts
+class_name GSProfilerScripts
 extends RefCounted
 
 ## GDScript function times for a recording: total and self time and calls per function, from the engine's
@@ -33,16 +33,16 @@ var _started_usec := 0
 
 
 ## Starts the script profiler; fails when the game was not started with -d.
-func start() -> DotResult:
+func start() -> GSResult:
 	if not EngineDebugger.is_active():
-		return DotResult.fail(DotError.CODE_STATE, "script functions need the game started with -d (the local debugger)")
+		return GSResult.fail(GSError.CODE_STATE, "script functions need the game started with -d (the local debugger)")
 	if not EngineDebugger.has_profiler(&"scripts"):
-		return DotResult.fail(DotError.CODE_STATE, "this build has no scripts profiler")
+		return GSResult.fail(GSError.CODE_STATE, "this build has no scripts profiler")
 	_catcher = Catcher.new()
 	OS.add_logger(_catcher)
 	EngineDebugger.profiler_enable(&"scripts", true)
 	_started_usec = Time.get_ticks_usec()
-	return DotResult.success(true)
+	return GSResult.success(true)
 
 
 func is_running() -> bool:
@@ -50,7 +50,7 @@ func is_running() -> bool:
 
 
 ## Stops it and returns the report's script_functions value: [param top] functions by self time, per script
-## totals, and [param buckets] ([method DotProfilerConfig.parse_buckets]) summed; ms are per frame over [param frames].
+## totals, and [param buckets] ([method GSProfilerConfig.parse_buckets]) summed; ms are per frame over [param frames].
 func stop(top: int, frames: int, buckets: Array[Dictionary] = []) -> Dictionary:
 	if _catcher == null:
 		return {}

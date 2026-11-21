@@ -1,4 +1,4 @@
-class_name DotProfilerCompare
+class_name GSProfilerCompare
 extends RefCounted
 
 ## Two reports side by side: frame percentiles, engine phases, systems and (version 2) call-tree nodes in ms
@@ -70,14 +70,14 @@ static func to_text(rows: Array[Dictionary], name_a: String = "A", name_b: Strin
 	return out
 
 
-## Reads a report JSON written by [method DotProfilerReport.write].
-static func load_report(path: String) -> DotResult:
-	var res := DotPaths.read_json(path)
+## Reads a report JSON written by [method GSProfilerReport.write].
+static func load_report(path: String) -> GSResult:
+	var res := GSPaths.read_json(path)
 	if not res.ok:
 		return res.wrap("profiler: cannot read %s" % path)
 	if not (res.value is Dictionary):
-		return DotResult.fail(DotError.CODE_INVALID, "%s is not a profiler report." % path)
-	return DotResult.success(res.value)
+		return GSResult.fail(GSError.CODE_INVALID, "%s is not a profiler report." % path)
+	return GSResult.success(res.value)
 
 
 static func _group_units(r: Dictionary) -> Dictionary:

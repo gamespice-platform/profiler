@@ -1,4 +1,4 @@
-class_name DotProfilerGraph
+class_name GSProfilerGraph
 extends Control
 
 ## A net_graph-style stacked area chart of frame cost: solid fills, one colour per band (physics, script, render,
@@ -8,7 +8,7 @@ const NET_IN := Color(0.40, 0.90, 1.0)
 const NET_OUT := Color(1.0, 0.55, 0.85)
 
 ## The data drawn; set before adding.
-var data: DotProfilerGraphData = null
+var data: GSProfilerGraphData = null
 var height_px := 60.0
 ## Milliseconds the full height stands for; 0 uses twice the budget.
 var scale_ms := 0.0
@@ -55,9 +55,9 @@ func _draw() -> void:
 	for age in data.count():
 		var x := x0 + (data.capacity - 1 - age) * col_w
 		var heights := PackedFloat32Array()
-		for b in DotProfilerGraphData.BANDS.size():
+		for b in GSProfilerGraphData.BANDS.size():
 			heights.append(data.value(b, age) * k)
-		var _drawn := DotStackedColumn.draw(self, x, h, col_w, heights, DotProfilerGraphData.COLORS, h)
+		var _drawn := GSStackedColumn.draw(self, x, h, col_w, heights, GSProfilerGraphData.COLORS, h)
 	var by := h - budget_ms * k
 	if by > 0.0:
 		draw_line(Vector2(x0, by), Vector2(x0 + data.capacity * col_w, by), Color(1, 1, 1, 0.6))
@@ -89,12 +89,12 @@ func _draw_legend(k: float) -> void:
 	for b in range(1, tops.size()):
 		starts.append(tops[b - 1] * k)
 	var gap := font_size + 1.0
-	var ys := DotProfilerGraphData.spread(starts, gap, height_px - gap)
+	var ys := GSProfilerGraphData.spread(starts, gap, height_px - gap)
 	for b in tops.size():
 		var start_ms := 0.0 if b == 0 else tops[b - 1]
 		var y := height_px - ys[b]
-		var c := DotProfilerGraphData.COLORS[b]
+		var c := GSProfilerGraphData.COLORS[b]
 		draw_rect(Rect2(0, y - 6, 5, 5), c)
 		draw_line(Vector2(legend_w() - 6, height_px - starts[b]), Vector2(legend_w(), height_px - starts[b]), c)
-		draw_string(font, Vector2(7, y), "%s %.1f" % [DotProfilerGraphData.BANDS[b], start_ms],
+		draw_string(font, Vector2(7, y), "%s %.1f" % [GSProfilerGraphData.BANDS[b], start_ms],
 			HORIZONTAL_ALIGNMENT_LEFT, legend_w() - 8, font_size, Color(0.9, 0.95, 1.0))

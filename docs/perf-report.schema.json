@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://gamespice.dev/schemas/perf-report/1.json",
   "title": "GameSpice performance report v1.1",
-  "description": "One performance capture of one game process (a client or a server, native or web). Written by DotProfilerPerfReport; read by Nightly's Performance tab and by tools/perf_report_check.py. Version 1.1 (schema_minor 1) is additive over 1.0, so every 1.0 report stays valid. Keys are only ever added within a schema_version; a key that changes meaning bumps schema_version. Every list named top_* is cut to the profiler_perf_top parameter, where 0 means unlimited; a cut list says so in `truncated`.",
+  "description": "One performance capture of one game process (a client or a server, native or web). Written by GSProfilerPerfReport; read by Nightly's Performance tab and by tools/perf_report_check.py. Version 1.1 (schema_minor 1) is additive over 1.0, so every 1.0 report stays valid. Keys are only ever added within a schema_version; a key that changes meaning bumps schema_version. Every list named top_* is cut to the profiler_perf_top parameter, where 0 means unlimited; a cut list says so in `truncated`.",
   "type": "object",
   "required": ["schema", "schema_version", "game_id", "build", "platform", "role", "scene", "duration_s", "frame"],
   "properties": {
@@ -183,7 +183,7 @@
         },
         "top_allocs": {
           "type": "array",
-          "description": "Named allocation counters a game reported (DotProfilerCounts): what creates objects, per frame.",
+          "description": "Named allocation counters a game reported (GSProfilerCounts): what creates objects, per frame.",
           "items": { "type": "object", "required": ["name", "total"], "properties": { "name": { "type": "string" }, "total": { "type": "integer" }, "per_frame": { "type": "number" } } }
         }
       }
@@ -191,7 +191,7 @@
 
     "signals": {
       "type": "object",
-      "description": "Signal fan-out from DotProfilerSignals: emits times receivers, most deliveries first; cut to profiler_perf_signal_top.",
+      "description": "Signal fan-out from GSProfilerSignals: emits times receivers, most deliveries first; cut to profiler_perf_signal_top.",
       "properties": {
         "fanout": {
           "type": "array",
@@ -207,7 +207,7 @@
         "out_kbps": { "$ref": "#/$defs/stat" },
         "by_class": {
           "type": "array",
-          "description": "Network cost per message or entity class, from DotProfilerNetCost.add(class, bytes).",
+          "description": "Network cost per message or entity class, from GSProfilerNetCost.add(class, bytes).",
           "items": {
             "type": "object",
             "required": ["class", "bytes"],
@@ -254,7 +254,7 @@
 
     "counters": {
       "type": "object",
-      "description": "Always-on cheap counters a game or addon reports (DotProfilerCounts): name -> totals.",
+      "description": "Always-on cheap counters a game or addon reports (GSProfilerCounts): name -> totals.",
       "additionalProperties": { "type": "object", "properties": { "total": { "type": "integer" }, "per_frame": { "type": "number" }, "per_tick": { "type": "number" } } }
     },
 

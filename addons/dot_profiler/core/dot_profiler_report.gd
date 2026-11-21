@@ -1,4 +1,4 @@
-class_name DotProfilerReport
+class_name GSProfilerReport
 extends RefCounted
 
 ## A recording turned into a report, written as JSON, readable text and folded stacks side by side.
@@ -10,7 +10,7 @@ const VERSION := 2
 
 
 ## The report for one recording. [param frames_ms] is every frame's wall time; [param spikes] the attributed spikes
-## ([method DotProfiler.attribute]); [param systems] {name: {ms, calls, worst_ms, what}} summed over the recording;
+## ([method GSProfiler.attribute]); [param systems] {name: {ms, calls, worst_ms, what}} summed over the recording;
 ## [param phases] {physics, script, render, wait} summed; [param meta] is merged in (budget_ms, seconds, scene).
 static func build(frames_ms: PackedFloat32Array, spikes: Array, systems: Dictionary, phases: Dictionary, meta: Dictionary) -> Dictionary:
 	var sorted := frames_ms.duplicate()
@@ -68,8 +68,8 @@ static func to_text(r: Dictionary, top: int = 20) -> PackedStringArray:
 	out.append("frames=%d over %.1f s  p50=%.1f p95=%.1f p99=%.1f worst=%.1f ms  budget=%.1f ms  spikes=%d" % [
 		r.get("frames", 0), r.get("wall_s", 0.0), r.get("p50_ms", 0.0), r.get("p95_ms", 0.0), r.get("p99_ms", 0.0),
 		r.get("worst_ms", 0.0), r.get("budget_ms", 0.0), r.get("spike_count", 0)])
-	out.append_array(DotProfilerSuspects.lines(r))
-	out.append_array(DotProfilerContext.lines(r))
+	out.append_array(GSProfilerSuspects.lines(r))
+	out.append_array(GSProfilerContext.lines(r))
 	var ph: Dictionary = r.get("phases", {})
 	if not ph.is_empty():
 		out.append("time in: physics %.0f ms, script %.0f ms, render %.0f ms, wait %.0f ms" % [
@@ -87,7 +87,7 @@ static func to_text(r: Dictionary, top: int = 20) -> PackedStringArray:
 	var systems: Array = r.get("systems", [])
 	if not systems.is_empty():
 		out.append("")
-		out.append("Systems (reported through DotFrameCost):")
+		out.append("Systems (reported through GSFrameCost):")
 		for s: Dictionary in systems.slice(0, top):
 			out.append("  %-28s %8.1f ms total  %6.2f ms/frame  worst %.1f ms  calls %d%s" % [s.system, s.ms,
 				s.ms_per_frame, s.worst_ms, s.calls, ("  worst: " + s.what) if s.what != "" else ""])
@@ -98,7 +98,7 @@ static func to_text(r: Dictionary, top: int = 20) -> PackedStringArray:
 		out.append("Worst spikes:")
 		for s: Dictionary in spikes.slice(0, top):
 			out.append("  " + spike_line(s))
-	out.append_array(DotProfilerReportText.lines(r, top))
+	out.append_array(GSProfilerReportText.lines(r, top))
 	return out
 
 
@@ -114,24 +114,24 @@ static func spike_line(s: Dictionary) -> String:
 
 ## Writes [param r] as <stamp>.json and <stamp>.txt, and [param folded] as <stamp>.folded when given,
 ## under [param dir] and keeps the newest [param keep]. The value is the JSON path.
-static func write(r: Dictionary, dir: String, keep: int = 20, folded: String = "") -> DotResult:
-	var made := DotPaths.ensure_dir(dir)
+static func write(r: Dictionary, dir: String, keep: int = 20, folded: String = "") -> GSResult:
+	var made := GSPaths.ensure_dir(dir)
 	if not made.ok:
 		return made.wrap("profiler: cannot make %s" % dir)
 	var stamp := Time.get_datetime_string_from_system(false, true).replace(":", "").replace(" ", "-").replace("-", "")
 	var base := dir.path_join("profile-%s-%03d" % [stamp, Time.get_ticks_msec() % 1000])
-	var j := DotPaths.write_json(base + ".json", r)
+	var j := GSPaths.write_json(base + ".json", r)
 	if not j.ok:
 		return j.wrap("profiler: cannot write the report")
-	var t := DotPaths.write_text(base + ".txt", "\n".join(to_text(r)) + "\n")
+	var t := GSPaths.write_text(base + ".txt", "\n".join(to_text(r)) + "\n")
 	if not t.ok:
 		return t.wrap("profiler: cannot write the text report")
 	if folded != "":
-		var f := DotPaths.write_text(base + ".folded", folded)
+		var f := GSPaths.write_text(base + ".folded", folded)
 		if not f.ok:
 			return f.wrap("profiler: cannot write the folded stacks")
 	prune(dir, keep)
-	return DotResult.success(base + ".json")
+	return GSResult.success(base + ".json")
 
 
 ## Recordings under [param dir], newest first: [{path, text_path, name, bytes}].
@@ -147,7 +147,7 @@ static func list(dir: String) -> Array[Dictionary]:
 		var path := dir.path_join(n)
 		out.append({"path": path, "text_path": path.get_basename() + ".txt", "folded_path": path.get_basename() + ".folded",
 			"name": n.get_basename(),
-			"bytes": DotPaths.file_size(path)})
+			"bytes": GSPaths.file_size(path)})
 	return out
 
 
@@ -159,11 +159,11 @@ static func prune(dir: String, keep: int) -> void:
 			if FileAccess.file_exists(p):
 				var err := DirAccess.remove_absolute(p)
 				if err != OK:
-					DotLog.warn(CHANNEL, "could not delete old recording %s: %s" % [p, error_string(err)])
-	DotWeb.sync_filesystem()
+					GSLog.warn(CHANNEL, "could not delete old recording %s: %s" % [p, error_string(err)])
+	GSWeb.sync_filesystem()
 
 
-## Attributes one [DotHitchLog] hitch record ([method DotProfiler.attribute]): the system that took at least
+## Attributes one [GSHitchLog] hitch record ([method GSProfiler.attribute]): the system that took at least
 ## [param cause_share] of it, else "engine.<phase>", plus hints read from its counter deltas, marks and new nodes.
 static func attribute(rec: Dictionary, cause_share: float) -> Dictionary:
 	var ms: float = rec.get("ms", 0.0)

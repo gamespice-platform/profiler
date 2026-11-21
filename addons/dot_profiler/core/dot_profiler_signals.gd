@@ -1,8 +1,8 @@
-class_name DotProfilerSignals
+class_name GSProfilerSignals
 extends RefCounted
 
 ## Signal fan-out for the perf report's [code]signals.fanout[/code]: how often a signal fires and how many receivers each emit reaches. The emitter says so:
-## [code]DotProfilerSignals.emitted(self, &"health_changed")[/code] right before (or after) [code]emit_signal[/code]; or [code]note(&"name", receivers)[/code] when it already knows the count.
+## [code]GSProfilerSignals.emitted(self, &"health_changed")[/code] right before (or after) [code]emit_signal[/code]; or [code]note(&"name", receivers)[/code] when it already knows the count.
 ## Emit count times receivers (deliveries) is what a hot signal costs.
 ##
 ## Main thread only. One bool test while no recording runs; after a signal's first emit an add allocates nothing.

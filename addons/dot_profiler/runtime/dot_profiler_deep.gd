@@ -1,4 +1,4 @@
-class_name DotProfilerDeep
+class_name GSProfilerDeep
 extends RefCounted
 
 ## Native samples next to a recording: Linux perf attached to this process for the recording's length,
@@ -12,17 +12,17 @@ const HZ := 999
 
 ## Starts perf on this process for [param seconds], writing [param out_path] (an OS path).
 ## The value is {pid, file, command}; perf stops by itself, so nothing has to stop it.
-static func start(seconds: float, out_path: String) -> DotResult:
+static func start(seconds: float, out_path: String) -> GSResult:
 	var why := unavailable()
 	if why != "":
-		return DotResult.fail(DotError.CODE_UNSUPPORTED, why)
+		return GSResult.fail(GSError.CODE_UNSUPPORTED, why)
 	var args := PackedStringArray(["record", "-g", "-F", str(HZ), "-p", str(OS.get_process_id()), "-o", out_path,
 		"--", "sleep", str(maxi(ceili(seconds), 1))])
 	var pid := OS.create_process("perf", args)
 	if pid <= 0:
-		return DotResult.fail(DotError.CODE_IO, "perf did not start (perf %s)." % " ".join(args))
-	DotLog.info(CHANNEL, "deep mode: perf sampling pid %d for %.0f s into %s" % [OS.get_process_id(), seconds, out_path])
-	return DotResult.success({"pid": pid, "file": out_path, "command": "perf " + " ".join(args)})
+		return GSResult.fail(GSError.CODE_IO, "perf did not start (perf %s)." % " ".join(args))
+	GSLog.info(CHANNEL, "deep mode: perf sampling pid %d for %.0f s into %s" % [OS.get_process_id(), seconds, out_path])
+	return GSResult.success({"pid": pid, "file": out_path, "command": "perf " + " ".join(args)})
 
 
 ## Why perf cannot sample this process here, or "" when it can.

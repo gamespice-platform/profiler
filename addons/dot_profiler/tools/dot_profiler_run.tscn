@@ -2,5 +2,5 @@
 
 [ext_resource type="Script" path="res://addons/dot_profiler/tools/dot_profiler_run.gd" id="1"]
 
-[node name="DotProfilerRun" type="Node"]
+[node name="GSProfilerRun" type="Node"]
 script = ExtResource("1")

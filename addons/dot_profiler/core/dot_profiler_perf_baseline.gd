@@ -1,4 +1,4 @@
-class_name DotProfilerPerfBaseline
+class_name GSProfilerPerfBaseline
 extends RefCounted
 
 ## The perf report's [code]baseline[/code] section (report v1.1): what moved between a reference perf report and this one, beyond a noise floor.
@@ -37,13 +37,13 @@ static func diff(cur: Dictionary, ref: Dictionary, noise_pct: float, against: St
 
 
 ## Reads the perf report at [param path]; a failed read is a failed result, so a bad [code]profiler_perf_baseline[/code] is loud.
-static func load_report(path: String) -> DotResult:
+static func load_report(path: String) -> GSResult:
 	if not FileAccess.file_exists(path):
-		return DotResult.fail(DotError.CODE_IO, "Baseline report %s does not exist." % path)
+		return GSResult.fail(GSError.CODE_IO, "Baseline report %s does not exist." % path)
 	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
 	if not (parsed is Dictionary) or (parsed as Dictionary).get("schema", "") != "gamespice.perf-report":
-		return DotResult.fail(DotError.CODE_INVALID, "Baseline %s is not a perf report." % path)
-	return DotResult.success(parsed)
+		return GSResult.fail(GSError.CODE_INVALID, "Baseline %s is not a perf report." % path)
+	return GSResult.success(parsed)
 
 
 ## The comparable numbers of a perf report, key to value.

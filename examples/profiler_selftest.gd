@@ -45,8 +45,8 @@ class FakeQuery:
 	extends RefCounted
 	var providers: Array = []
 
-	func add_provider(p: Object) -> DotResult:
-		var v := DotQueryProvider.validate(p)
+	func add_provider(p: Object) -> GSResult:
+		var v := GSQueryProvider.validate(p)
 		if v.ok:
 			providers.append(p)
 		return v
@@ -54,14 +54,14 @@ class FakeQuery:
 	func remove_provider(p: Object) -> void:
 		providers.erase(p)
 
-	func snapshot() -> DotQuerySnapshot:
-		var s := DotQuerySnapshot.new()
+	func snapshot() -> GSQuerySnapshot:
+		var s := GSQuerySnapshot.new()
 		s.info["bots"] = 2
 		return s
 
 
 func _ready() -> void:
-	var _r := DotPaths.remove_tree(DIR)
+	var _r := GSPaths.remove_tree(DIR)
 	_period()
 	_attribution()
 	_config()
@@ -70,7 +70,7 @@ func _ready() -> void:
 	await _panel()
 	await _server()
 	_report()
-	var _c := DotPaths.remove_tree(DIR)
+	var _c := GSPaths.remove_tree(DIR)
 	print("profiler_selftest: %d of %d sections, %d checks (want %d), %d failed" % [_sections, SECTIONS, _checks, CHECKS, _failed])
 	var ok := _failed == 0 and _sections == SECTIONS and _checks == CHECKS
 	get_tree().quit(0 if ok else 1)
@@ -83,10 +83,10 @@ func _process(_delta: float) -> void:
 	if now < _next_beat:
 		return
 	_next_beat = now + _beat_s
-	var t := DotFrameCost.now()
+	var t := GSFrameCost.now()
 	while Time.get_ticks_usec() - t < 45000 and t > 0:
 		pass
-	DotFrameCost.add(&"selftest.timer", t, "rebuild cache")
+	GSFrameCost.add(&"selftest.timer", t, "rebuild cache")
 
 
 func _check(ok: bool, what: String) -> void:
@@ -97,18 +97,18 @@ func _check(ok: bool, what: String) -> void:
 
 
 func _period() -> void:
-	var p := DotProfilerPeriod.new()
+	var p := GSProfilerPeriod.new()
 	for t in [0.0, 1.02, 1.98, 3.01, 5.0, 6.03, 6.99]:
 		p.add(t)
 	var f := p.detect()
 	_check(not f.is_empty() and absf(f.period_s - 1.0) < 0.03, "a 1 s beat with a skipped beat is found: %s" % f)
 	_check(f.get("beats", 0) == 6, "every gap fits the beat")
-	_check(DotProfilerPeriod.describe_found(f).begins_with("every 1.0"), "the beat reads 'every 1.0x s'")
-	var q := DotProfilerPeriod.new()
+	_check(GSProfilerPeriod.describe_found(f).begins_with("every 1.0"), "the beat reads 'every 1.0x s'")
+	var q := GSProfilerPeriod.new()
 	for t in [0.0, 0.31, 1.7, 1.93, 3.6, 3.71, 5.9]:
 		q.add(t)
 	_check(q.detect().is_empty(), "irregular spikes have no beat: %s" % q.detect())
-	var r := DotProfilerPeriod.new()
+	var r := GSProfilerPeriod.new()
 	for t in [0.0, 0.5, 1.0]:
 		r.add(t)
 	_check(r.detect().is_empty(), "three spikes are too few to name a beat")
@@ -119,23 +119,23 @@ func _attribution() -> void:
 	var rec := {"t": 2.0, "ms": 50.0, "physics": 2.0, "script": 44.0, "render": 3.0, "wait": 1.0,
 		"systems": {&"navigation": {"ms": 30.0, "calls": 1, "worst_ms": 30.0, "what": "rebuild"}, &"hud": {"ms": 1.0, "calls": 3, "worst_ms": 0.5, "what": ""}},
 		"deltas": {"compile": 2, "added": 14, "kb": 900}, "marks": ["killcam"], "added": ["Ragdoll(ragdoll.gd)@3ms"]}
-	var a := DotProfiler.attribute(rec)
+	var a := GSProfiler.attribute(rec)
 	_check(a.cause == "navigation" and a.what == "rebuild", "the system with most of the frame is the cause: %s" % a.cause)
 	_check("2 shader compile(s)" in a.hints and "+14 nodes" in a.hints, "compiles and new nodes are hints: %s" % [a.hints])
 	_check(a.hints.any(func(h: String) -> bool: return h.begins_with("new=Ragdoll")), "the new subtree is named")
 	_check(a.systems.get("hud", 0.0) == 1.0, "every system's cost is kept")
 	rec.systems = {&"hud": {"ms": 5.0, "calls": 1, "worst_ms": 5.0, "what": ""}}
-	_check(DotProfiler.attribute(rec).cause == "engine.script", "a small system leaves the cause to the slowest phase")
+	_check(GSProfiler.attribute(rec).cause == "engine.script", "a small system leaves the cause to the slowest phase")
 	rec.systems = {}
 	rec.render = 60.0
-	_check(DotProfiler.attribute(rec).cause == "engine.render", "with no system reports the render phase is blamed")
-	var line := DotProfilerReport.spike_line(a)
+	_check(GSProfiler.attribute(rec).cause == "engine.render", "with no system reports the render phase is blamed")
+	var line := GSProfilerReport.spike_line(a)
 	_check(line.contains("navigation (rebuild)") and line.contains("t=2.00s"), "a spike reads as one line: %s" % line)
 	_sections += 1
 
 
 func _graph() -> void:
-	var d := DotProfilerGraphData.new(30)
+	var d := GSProfilerGraphData.new(30)
 	for i in 40:
 		d.push_record({"ms": 20.0, "physics": 2.0, "script": 6.0, "render": 4.0, "wait": 3.0})
 	_check(d.count() == 30, "the ring keeps only its capacity of frames")
@@ -143,15 +143,15 @@ func _graph() -> void:
 	_check(is_equal_approx(t[0], 2.0) and is_equal_approx(t[1], 8.0), "each band stacks on the one below: %s" % [t])
 	_check(is_equal_approx(t[4], 20.0), "the stack top is the frame time, the rest is 'other'")
 	_check(is_equal_approx(d.value(4, 0), 5.0), "other is what the phases leave of the frame")
-	var sp := DotProfilerGraphData.spread(PackedFloat32Array([0, 1, 2, 3, 4]), 10.0, 100.0)
+	var sp := GSProfilerGraphData.spread(PackedFloat32Array([0, 1, 2, 3, 4]), 10.0, 100.0)
 	_check(sp[1] - sp[0] >= 10.0 and sp[4] - sp[3] >= 10.0 and sp[4] <= 100.0, "legend labels never overlap: %s" % [sp])
-	var sp2 := DotProfilerGraphData.spread(PackedFloat32Array([0, 95, 98, 99, 99]), 10.0, 100.0)
+	var sp2 := GSProfilerGraphData.spread(PackedFloat32Array([0, 95, 98, 99, 99]), 10.0, 100.0)
 	_check(sp2[4] <= 100.0 and sp2[4] - sp2[3] >= 10.0 and sp2[1] >= 10.0, "labels crowded at the top move down inside the graph: %s" % [sp2])
-	var c := DotProfilerConfig.new()
+	var c := GSProfilerConfig.new()
 	_check(c.graph and c.graph_legend and c.graph_height == 60, "the graph and its legend are on by default")
 	_check(not c.set_text("graph_height", "5").ok and c.graph_height == 60, "a graph too short is refused")
 	_check(c.set_text("graph_legend", "0").ok and not c.graph_legend, "the legend can be turned off")
-	var g := DotProfilerGraph.new()
+	var g := GSProfilerGraph.new()
 	g.data = d
 	g.height_px = 100.0
 	g.show_legend = false
@@ -165,7 +165,7 @@ func _graph() -> void:
 
 
 func _config() -> void:
-	var c := DotProfilerConfig.new()
+	var c := GSProfilerConfig.new()
 	_check(not c.enabled and not c.overlay, "everything is off by default")
 	_check(c.validate().ok, "the defaults validate")
 	_check(not c.set_text("budget_ms", "-3").ok and c.budget_ms == 33.0, "a bad budget is refused and put back")
@@ -185,22 +185,22 @@ func _config() -> void:
 
 func _live() -> void:
 	Engine.max_fps = 60
-	var prof := DotProfiler.new()
-	prof.config = DotProfilerConfig.new()
+	var prof := GSProfiler.new()
+	prof.config = GSProfilerConfig.new()
 	prof.config.budget_ms = 30.0
 	prof.config.record_dir = DIR
 	prof.config.warn_every_s = 100.0
 	add_child(prof)
-	_check(DotRegistry.get_service(DotProfiler.SERVICE) == prof, "the profiler registers itself as dot_profiler")
-	_check(not prof.is_watching() and not DotFrameCost.enabled, "nothing is watched while off")
+	_check(GSRegistry.get_service(GSProfiler.SERVICE) == prof, "the profiler registers itself as dot_profiler")
+	_check(not prof.is_watching() and not GSFrameCost.enabled, "nothing is watched while off")
 	var spikes: Array = []
 	prof.spike.connect(func(info: Dictionary) -> void: spikes.append(info))
 	var started := prof.start_recording(3.2)
-	_check(started.ok and prof.is_watching() and DotFrameCost.enabled, "recording turns watching on")
+	_check(started.ok and prof.is_watching() and GSFrameCost.enabled, "recording turns watching on")
 	_check(not prof.start_recording(1.0).ok, "a second recording is refused")
 	_next_beat = Time.get_ticks_msec() / 1000.0 + 0.2
 	_busy = true
-	var res: DotResult = await prof.recording_finished
+	var res: GSResult = await prof.recording_finished
 	_busy = false
 	_check(res.ok and FileAccess.file_exists(res.value), "the recording stopped itself and wrote %s" % [res.value if res.ok else res.error.message])
 	_check(FileAccess.file_exists(String(res.value).get_basename() + ".txt"), "a readable text report sits beside it")
@@ -208,34 +208,34 @@ func _live() -> void:
 	_check(timer.size() >= 5, "the beating system is named as the cause of %d of %d spikes" % [timer.size(), spikes.size()])
 	var per := prof.period_of("selftest.timer")
 	_check(not per.is_empty() and absf(per.period_s - _beat_s) < 0.05, "its beat is found: %s" % per)
-	var rep: Dictionary = (DotPaths.read_json(res.value) as DotResult).value
+	var rep: Dictionary = (GSPaths.read_json(res.value) as GSResult).value
 	_check(rep.frames > 60 and rep.p50_ms < 30.0 and rep.worst_ms >= 40.0, "the report has frames, p50 and the worst spike")
 	_check(rep.causes.has("selftest.timer") and String(rep.causes["selftest.timer"].period).begins_with("every 0.4"),
 		"the report names the cause and its beat: %s" % [rep.causes.get("selftest.timer")])
-	_check(not prof.is_watching() and not DotFrameCost.enabled, "watching stops with the recording when the profiler is off")
+	_check(not prof.is_watching() and not GSFrameCost.enabled, "watching stops with the recording when the profiler is off")
 	var console := FakeConsole.new()
 	prof.bind_console(console)
 	_check(console.commands.has("record") and console.commands.has("profiler_stop") and console.vars.has("profiler_overlay"),
 		"record, profiler_stop and profiler_* are on the console")
 	var on: Variant = console.vars["profiler_overlay"][1].call("1")
-	_check(on is DotResult and on.ok and prof.config.overlay and prof.get_children().any(func(n: Node) -> bool: return n is DotProfilerOverlay),
+	_check(on is GSResult and on.ok and prof.config.overlay and prof.get_children().any(func(n: Node) -> bool: return n is GSProfilerOverlay),
 		"profiler_overlay 1 shows the overlay")
-	_check(DotProfilerOverlay.lines(prof).size() >= 3, "the overlay has a header and rows")
+	_check(GSProfilerOverlay.lines(prof).size() >= 3, "the overlay has a header and rows")
 	var _off: Variant = console.vars["profiler_overlay"][1].call("0")
 	await get_tree().process_frame
 	_check(not prof.is_watching(), "profiler_overlay 0 stops watching again")
 	prof.queue_free()
 	await get_tree().process_frame
-	_check(not DotRegistry.has(DotProfiler.SERVICE), "freeing the profiler unregisters it")
+	_check(not GSRegistry.has(GSProfiler.SERVICE), "freeing the profiler unregisters it")
 	_sections += 1
 
 
 func _panel() -> void:
-	var prof := DotProfiler.new()
-	prof.config = DotProfilerConfig.new()
+	var prof := GSProfiler.new()
+	prof.config = GSProfilerConfig.new()
 	prof.config.record_dir = DIR
 	add_child(prof)
-	var panel := prof.make_menu_panel(null) as DotProfilerPanel
+	var panel := prof.make_menu_panel(null) as GSProfilerPanel
 	add_child(panel)
 	var before := prof.recent_recordings(50).size()
 	panel.record_button.pressed.emit()
@@ -256,9 +256,9 @@ func _panel() -> void:
 
 
 ## A console line run as [param source] with [param perms]; returns what it replied.
-func _run(console: DotConsole, line: String, source := DotCmdContext.Source.RCON, perms := PackedStringArray(["config"])) -> String:
+func _run(console: GSConsole, line: String, source := GSCmdContext.Source.RCON, perms := PackedStringArray(["config"])) -> String:
 	var out := PackedStringArray()
-	var ctx := DotCmdContext.new()
+	var ctx := GSCmdContext.new()
 	ctx.source = source
 	ctx.permissions = perms
 	ctx.reply_sink = func(t: String) -> void: out.append(t)
@@ -267,25 +267,25 @@ func _run(console: DotConsole, line: String, source := DotCmdContext.Source.RCON
 
 
 func _server() -> void:
-	var console := DotConsole.new()
+	var console := GSConsole.new()
 	add_child(console)
 	var server := FakeServer.new()
 	var logs := ProjectSettings.globalize_path(DIR).path_join("logs")
 	server.config.log_directory = logs
 	add_child(server)
-	var prof := DotProfiler.new()
-	prof.config = DotProfilerConfig.new()
+	var prof := GSProfiler.new()
+	prof.config = GSProfilerConfig.new()
 	prof.register_as_service = false
 	add_child(prof)
-	var ctl := DotProfilerServer.new()
+	var ctl := GSProfilerServer.new()
 	var res := ctl.install(prof, console, server, server.query_source)
 	_check(res.ok and ctl.get_parent() == prof, "installs on a dot-server console under the profiler: %s" % [res.error.message if not res.ok else ""])
 	_check(ctl.names().size() == 9 and Array(ctl.names()).all(func(n: String) -> bool: return console.has_name(n)), "every sv_profiler_* command is registered")
 	_check(console.find_cvar("profiler_record_dir") != null and console.find_cvar("profiler_sample_hz") != null, "profiler_record_dir and profiler_sample_hz are server cvars")
 	_check(prof.config.record_dir == logs.path_join("profiles"), "recordings go under the server's log directory: %s" % prof.config.record_dir)
-	var refused := _run(console, "sv_profiler_record 1", DotCmdContext.Source.RCON, PackedStringArray())
+	var refused := _run(console, "sv_profiler_record 1", GSCmdContext.Source.RCON, PackedStringArray())
 	_check(not prof.is_recording() and refused.contains("permission"), "RCON without the config flag is refused: %s" % refused)
-	_check(not _run(console, "sv_profiler_status", DotCmdContext.Source.CHAT, PackedStringArray()).contains("recording"), "a player in chat cannot read it either")
+	_check(not _run(console, "sv_profiler_status", GSCmdContext.Source.CHAT, PackedStringArray()).contains("recording"), "a player in chat cannot read it either")
 	var _hz := _run(console, "profiler_sample_hz 20")
 	_check(is_equal_approx(prof.config.sample_hz, 20.0), "profiler_sample_hz set over RCON reaches the config")
 	var started := _run(console, "sv_profiler_record 30")
@@ -302,17 +302,17 @@ func _server() -> void:
 	_check(_run(console, "sv_profiler_frame").contains("frame_ms") and _run(console, "sv_profiler_memory").contains("orphans")
 		and _run(console, "sv_profiler_net").contains("players") and _run(console, "sv_profiler_hitches") != "" and _run(console, "sv_profiler_systems 3") != "",
 		"frame, memory, net, hitches and systems each answer")
-	var stopped := _run(console, "sv_profiler_stop", DotCmdContext.Source.CONSOLE, PackedStringArray(["root"]))
+	var stopped := _run(console, "sv_profiler_stop", GSCmdContext.Source.CONSOLE, PackedStringArray(["root"]))
 	var path := prof.last_saved_path()
 	_check(not prof.is_recording() and path.begins_with(logs) and FileAccess.file_exists(path) and stopped.contains("Saved to"), "sv_profiler_stop writes into the log directory: %s" % stopped)
-	var rep: Dictionary = (DotPaths.read_json(path) as DotResult).value if path != "" else {}
+	var rep: Dictionary = (GSPaths.read_json(path) as GSResult).value if path != "" else {}
 	var samples: Array = rep.get("samples", [])
 	_check(samples.size() >= 2 and samples[0].has("players") and samples[0].has("nodes"), "the report carries server samples: %d" % samples.size())
-	var snap := DotQuerySnapshot.new()
-	DotQueryProvider.contribute_to(ctl, snap)
+	var snap := GSQuerySnapshot.new()
+	GSQueryProvider.contribute_to(ctl, snap)
 	_check(server.query_source.providers.has(ctl) and snap.game.is_empty(), "the query provider publishes nothing while profiler_query is 0")
 	var _q := _run(console, "profiler_query 1")
-	DotQueryProvider.contribute_to(ctl, snap)
+	GSQueryProvider.contribute_to(ctl, snap)
 	_check(snap.game.has("profiler_ms") and snap.game.has("profiler_spikes"), "with profiler_query 1 the query's game section has the frame time")
 	prof.queue_free()
 	await get_tree().process_frame
@@ -328,13 +328,13 @@ func _report() -> void:
 	var frames := PackedFloat32Array()
 	for i in 100:
 		frames.append(10.0 if i % 25 != 0 else 50.0)
-	var r := DotProfilerReport.build(frames, [{"t": 1.0, "ms": 50.0, "cause": "a", "period": "every 0.40 s (3 of 3 gaps)"}], {}, {}, {"budget_ms": 33.0})
+	var r := GSProfilerReport.build(frames, [{"t": 1.0, "ms": 50.0, "cause": "a", "period": "every 0.40 s (3 of 3 gaps)"}], {}, {}, {"budget_ms": 33.0})
 	_check(r.p50_ms == 10.0 and r.worst_ms == 50.0 and r.p99_ms == 50.0, "percentiles from the frames")
-	_check("\n".join(DotProfilerReport.to_text(r)).contains("repeats every 0.40 s"), "the text names the beat")
-	var cfg := DotProfilerConfig.new()
+	_check("\n".join(GSProfilerReport.to_text(r)).contains("repeats every 0.40 s"), "the text names the beat")
+	var cfg := GSProfilerConfig.new()
 	cfg.keep_recordings = 2
 	for i in 3:
-		var _w := DotProfilerReport.write(r, DIR + "/prune", cfg.keep_recordings)
+		var _w := GSProfilerReport.write(r, DIR + "/prune", cfg.keep_recordings)
 		OS.delay_msec(1100)
-	_check(DotProfilerReport.list(DIR + "/prune").size() == 2, "only the newest recordings are kept")
+	_check(GSProfilerReport.list(DIR + "/prune").size() == 2, "only the newest recordings are kept")
 	_sections += 1

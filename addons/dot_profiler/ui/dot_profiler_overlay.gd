@@ -1,4 +1,4 @@
-class_name DotProfilerOverlay
+class_name GSProfilerOverlay
 extends CanvasLayer
 
 ## The top costs drawn over the game: frame time against budget, the last spike and its beat, then the costliest systems.
@@ -6,10 +6,10 @@ extends CanvasLayer
 const REFRESH_S := 0.25
 
 ## The profiler read from; set before adding.
-var profiler: DotProfiler = null
+var profiler: GSProfiler = null
 
 var _label: Label = null
-var _graph: DotProfilerGraph = null
+var _graph: GSProfilerGraph = null
 var _bg: PanelContainer = null
 var _style: StyleBoxFlat = null
 var _hidden_net: CanvasItem = null
@@ -32,7 +32,7 @@ func _ready() -> void:
 	var box := VBoxContainer.new()
 	bg.add_child(box)
 	box.add_child(_label)
-	_graph = DotProfilerGraph.new()
+	_graph = GSProfilerGraph.new()
 	_graph.data = profiler.graph_data()
 	box.add_child(_graph)
 	apply_graph()
@@ -131,7 +131,7 @@ func refresh() -> void:
 
 
 ## The overlay's text for [param p].
-static func lines(p: DotProfiler) -> PackedStringArray:
+static func lines(p: GSProfiler) -> PackedStringArray:
 	var st := p.status()
 	var out := PackedStringArray()
 	out.append("frame %.1f ms  budget %.0f  spikes %d%s" % [st.ms, st.budget_ms, st.spikes,

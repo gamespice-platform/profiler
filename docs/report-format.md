@@ -11,7 +11,7 @@ A recording writes three files next to each other in `profiler_record_dir`: `pro
 | `frames`, `wall_s` | Frames recorded and their total length in seconds. |
 | `p50_ms`, `p95_ms`, `p99_ms`, `worst_ms` | Frame time percentiles. |
 | `spike_count`, `spikes`, `causes` | Frames over `budget_ms` and who they were charged to. |
-| `systems` | Rows `{system, ms, calls, worst_ms, what, ms_per_frame}` from `DotFrameCost.add`, costliest first. |
+| `systems` | Rows `{system, ms, calls, worst_ms, what, ms_per_frame}` from `GSFrameCost.add`, costliest first. |
 | `phases` | Total ms per engine phase: `physics`, `script`, `render`, `wait`. |
 | `budget_ms`, `seconds`, `scene`, `period`, `sample_hz`, `samples` | The recording's settings and metric samples. |
 
@@ -23,7 +23,7 @@ A recording writes three files next to each other in `profiler_record_dir`: `pro
 | `tree` | The call tree in depth-first order, costliest child first: rows `{path, name, depth, ms, self_ms, calls, p95_ms, max_ms, frames}`. `ms` (inclusive), `self_ms` (exclusive) and `calls` are per frame averaged over every frame; `p95_ms` counts frames the node missed as 0; `max_ms` is its worst single frame; `frames` is how many frames it ran in. |
 | `worst_frames` | The `profiler_worst_frames` slowest frames whole: `{t, ms, ticks, physics, script, render, wait, tree, queries, monitors}`, `tree` rows `{path, ms, self_ms, calls}` for that frame only. |
 | `monitors` | Engine monitors read every frame, each `{min, avg, p50, p95, p99, max}`: `time_process_ms`, `time_physics_ms`, `time_navigation_ms`, `physics_3d_active`, `physics_3d_pairs`, `physics_3d_islands`, `draw_calls`, `objects_drawn`, `primitives`, `objects`, `nodes`, `orphan_nodes`, `static_mb`, `video_mb`. |
-| `queries` | Physics queries by caller and kind, costliest first: `{system, kind, ms, calls, worst_ms, ms_per_frame, calls_per_frame, calls_per_tick, us_per_call}`. Kinds are `cast_motion`, `rest_info`, `intersect_ray`, `intersect_shape`, `intersect_point`, `collide_shape`, `move_and_collide`, `body_test_motion` and whatever a system passes to `DotFrameCost.add_query`. Unnamed callers are `unattributed`. |
+| `queries` | Physics queries by caller and kind, costliest first: `{system, kind, ms, calls, worst_ms, ms_per_frame, calls_per_frame, calls_per_tick, us_per_call}`. Kinds are `cast_motion`, `rest_info`, `intersect_ray`, `intersect_shape`, `intersect_point`, `collide_shape`, `move_and_collide`, `body_test_motion` and whatever a system passes to `GSFrameCost.add_query`. Unnamed callers are `unattributed`. |
 | `traced_queries` | `{caller: {kind: {ms, calls}}}` from the tree: the span each `q.<kind>` ran inside, which can be finer than the `system` passed in. |
 | `physics_ticks` | `{ticks, per_second, max_per_frame, per_frame, histogram, catch_up_frames, spiral_frames, wall_s, ticks_per_sec, dropped_ticks}`. `dropped_ticks` is the ticks the wall time called for (`wall_s` x `per_second`) minus the ticks that ran. `histogram` maps ticks-in-a-frame (as a string) to frames. A catch-up frame ran 2 or more ticks; a spiral frame hit `max_physics_steps_per_frame`. |
 | `overhead` | `{on_frame_avg_ms, on_frame_max_ms, spans_per_frame, trace}`: the profiler's own per-frame cost while recording, measured around its frame handler. |
@@ -39,16 +39,16 @@ These are on by default and need `profiler_trace` (the tree) for the first three
 | `functions` | Every traced span summed by name over the whole tree, so one name called from several places is one row: `{name, path, per, paths, self_ms, total_ms, calls, us_per_call, self_us_per_call, self_ms_per_frame, total_ms_per_frame, us_per_unit, total_us_per_unit}`. A span under `frame;physics` is `per` "tick" (ms and calls per physics tick), any other "frame"; `path` is where most of its self time ran, `paths` in how many places. The engine's own nodes appear as "physics scripts (no span)" (script time no span covers), "physics engine step", "process scripts (no span)" and "render (engine)". |
 | `budget` | `{tick_ms, tick_rate, frame_ms, ticks_per_frame, unit, units, target_us, sim_ms_per_tick, sim_pct_tick, sim_us_per_unit}`: what the suspects are held against, and all physics scripts per tick and per unit. |
 | `unit` | `{name, count}` for `profiler_per_unit`, `count` as `{min, avg, p50, p95, p99, max}` per frame. |
-| `engine` | Work no span names, per physics tick: `{ticks, frames, queries_per_tick, query_ms_per_tick, query_us_per_call, nodes_added, nodes_removed, nodes_added_per_tick, nodes_removed_per_tick, objects_grown_per_tick, objects_net, resources_grown_per_tick, resources_net, static_kb_grown_per_tick, static_kb_net, static_peak_mb, counts, not_counted}`. `*_grown` sums the rise of the engine's object, resource and static memory counts over the frames they rose: a floor for what was created, since a frame that frees as much as it makes shows none. `counts` is `{name: {total, per_tick, per_frame}}` for what the game reported with `DotProfilerCounts.add(name)` (signal emits, lookups, container builds); the engine counts neither signal emits nor single allocations in a release build, and `not_counted` says so. |
+| `engine` | Work no span names, per physics tick: `{ticks, frames, queries_per_tick, query_ms_per_tick, query_us_per_call, nodes_added, nodes_removed, nodes_added_per_tick, nodes_removed_per_tick, objects_grown_per_tick, objects_net, resources_grown_per_tick, resources_net, static_kb_grown_per_tick, static_kb_net, static_peak_mb, counts, not_counted}`. `*_grown` sums the rise of the engine's object, resource and static memory counts over the frames they rose: a floor for what was created, since a frame that frees as much as it makes shows none. `counts` is `{name: {total, per_tick, per_frame}}` for what the game reported with `GSProfilerCounts.add(name)` (signal emits, lookups, container builds); the engine counts neither signal emits nor single allocations in a release build, and `not_counted` says so. |
 
-A span is a function when the game times one: `DotFrameCost.add(name, since)` around a function body, nested as deep as wanted. A release build has no script debugger, so `script_functions` (function and line from the engine's script profiler) stays a debug-build tool; spans work in every build.
+A span is a function when the game times one: `GSFrameCost.add(name, since)` around a function body, nested as deep as wanted. A release build has no script debugger, so `script_functions` (function and line from the engine's script profiler) stays a debug-build tool; spans work in every build.
 
 ## Context keys
 
 | Key | Meaning |
 | --- | --- |
-| `context` | `{machine, <game keys>}`. `machine` is `{os, cpu, cores, ram_mb, gpu, gpu_vendor, driver, renderer, godot, debug_build, tick_rate, max_fps, window, vsync, display}`; `build` is `{name, version, commit, branch, source, addons}`: the commit comes from the checkout's `.git` (`source` "git", with each linked addon's commit in `addons`), else from `build_id.json` beside `project.godot` ("stamp", written by `addons/dot_profiler/tools/build_stamp.sh` before a pack or an export), else "unknown". `launch` is the command line, secrets masked. `cvars` (when a console is bound) is `{count, changed, values}`: every console variable as text, and those changed since the console was bound as `"now (was then)"`; a value set by a launch argument shows in `values` and `launch` only. A game adds keys with `DotProfiler.add_context(key, provider)` (map, bots, natives loaded). Read when the recording starts. The text report prints one line per key and only the size of a nested value over 12 entries. |
-| `extras` | `{<key>: Dictionary}` from `DotProfiler.add_recording_hook(key, begin, end)`: what `end` returned when the recording stopped (a game's native timers). A hook returning an empty Dictionary is left out. |
+| `context` | `{machine, <game keys>}`. `machine` is `{os, cpu, cores, ram_mb, gpu, gpu_vendor, driver, renderer, godot, debug_build, tick_rate, max_fps, window, vsync, display}`; `build` is `{name, version, commit, branch, source, addons}`: the commit comes from the checkout's `.git` (`source` "git", with each linked addon's commit in `addons`), else from `build_id.json` beside `project.godot` ("stamp", written by `addons/dot_profiler/tools/build_stamp.sh` before a pack or an export), else "unknown". `launch` is the command line, secrets masked. `cvars` (when a console is bound) is `{count, changed, values}`: every console variable as text, and those changed since the console was bound as `"now (was then)"`; a value set by a launch argument shows in `values` and `launch` only. A game adds keys with `GSProfiler.add_context(key, provider)` (map, bots, natives loaded). Read when the recording starts. The text report prints one line per key and only the size of a nested value over 12 entries. |
+| `extras` | `{<key>: Dictionary}` from `GSProfiler.add_recording_hook(key, begin, end)`: what `end` returned when the recording stopped (a game's native timers). A hook returning an empty Dictionary is left out. |
 
 `render_cpu_ms` and `render_gpu_ms` are in every recording (`profiler_render_time`); the capture key and `profiler_capture` turn the rest of `render_detail` on for that capture; `profiler_reference` (a JSON path) diffs every written report against that file and saves `<report>.diff.txt`.
 
@@ -67,7 +67,7 @@ These come from the options in [design.md](design.md#configuration); all are off
 
 ## The tree
 
-Every frame's tree hangs under fixed roots, taken from `DotHitchLog`'s stamps and a tail node that runs after every other `_physics_process`:
+Every frame's tree hangs under fixed roots, taken from `GSHitchLog`'s stamps and a tail node that runs after every other `_physics_process`:
 
 ```
 frame
@@ -79,7 +79,7 @@ frame
     step         the engine's physics step and sync after the scripts, once per tick
 ```
 
-Spans reported through `DotFrameCost` nest under the root that contains them and under each other by time, so `frame;physics;scripts;fc.bots;q.intersect_ray` is a ray cast by bots inside a physics tick. Work no span covers is the parent's `self_ms`. Tracing is on only while recording with `profiler_trace` 1.
+Spans reported through `GSFrameCost` nest under the root that contains them and under each other by time, so `frame;physics;scripts;fc.bots;q.intersect_ray` is a ray cast by bots inside a physics tick. Work no span covers is the parent's `self_ms`. Tracing is on only while recording with `profiler_trace` 1.
 
 ## Folded stacks
 
@@ -98,9 +98,9 @@ After the version 1 text come, in this order: `Frames (ms):`, `Physics ticks:` (
 
 ## Compare
 
-`DotProfilerCompare.compare(a, b)`, the `profiler_compare [a.json b.json]` console command and `tools/profile_compare.py a.json b.json` print the same thing: B minus A in ms per frame, in sections `frame` (p50, p95, p99, worst), `phase`, `system`, `tree` and `query`, each sorted by the size of the change, then `group` (count and us per unit), `script` (self ms per function and bucket) and `monitor` (averages, in their own unit) when both reports have them. Version 1 reports compare on what they have.
+`GSProfilerCompare.compare(a, b)`, the `profiler_compare [a.json b.json]` console command and `tools/profile_compare.py a.json b.json` print the same thing: B minus A in ms per frame, in sections `frame` (p50, p95, p99, worst), `phase`, `system`, `tree` and `query`, each sorted by the size of the change, then `group` (count and us per unit), `script` (self ms per function and bucket) and `monitor` (averages, in their own unit) when both reports have them. Version 1 reports compare on what they have.
 
-`--diff` treats A as the saved baseline and prints only rows that moved by at least `--noise-pct` (5 by default, the run-to-run noise of a pinned box) percent of A, or that are new in B; `--min-abs` also drops changes smaller than that. In GDScript the same filter is `DotProfilerCompare.changed(rows, noise_pct, min_abs)`.
+`--diff` treats A as the saved baseline and prints only rows that moved by at least `--noise-pct` (5 by default, the run-to-run noise of a pinned box) percent of A, or that are new in B; `--min-abs` also drops changes smaller than that. In GDScript the same filter is `GSProfilerCompare.changed(rows, noise_pct, min_abs)`.
 
 ```
 python3 tools/profile_compare.py before.json after.json --min-ms 0.1 --top 20

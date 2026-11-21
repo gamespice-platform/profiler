@@ -11,6 +11,6 @@ func _process(_delta: float) -> void:
 	if now < _next:
 		return
 	_next = now + 0.5
-	var t := DotFrameCost.now()
+	var t := GSFrameCost.now()
 	OS.delay_msec(30)
-	DotFrameCost.add(&"spiky.rebuild", t, "every half second")
+	GSFrameCost.add(&"spiky.rebuild", t, "every half second")

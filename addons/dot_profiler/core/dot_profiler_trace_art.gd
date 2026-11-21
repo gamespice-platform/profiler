@@ -1,4 +1,4 @@
-class_name DotProfilerTraceArt
+class_name GSProfilerTraceArt
 extends RefCounted
 
 ## A viewable call trace for one recording, made from its folded stacks: a self-contained HTML page holding an SVG icicle
@@ -127,15 +127,15 @@ static func thumbnail(folded: String, width: int = 480, row_px: int = 6, max_box
 
 ## Writes [code]<base>.trace.html[/code] (and [code].trace.png[/code] when [param png_width] is above 0) for [param folded].
 ## The value is the HTML path; "" (still ok) when there is nothing to draw.
-static func write(folded: String, base: String, title: String, png_width: int, max_boxes: int) -> DotResult:
+static func write(folded: String, base: String, title: String, png_width: int, max_boxes: int) -> GSResult:
 	var page := html(folded, title, 1200, max_boxes)
 	if page == "":
-		return DotResult.success("")
-	var w := DotPaths.write_text(base + ".trace.html", page)
+		return GSResult.success("")
+	var w := GSPaths.write_text(base + ".trace.html", page)
 	if not w.ok:
 		return w.wrap("profiler: cannot write the call trace")
 	if png_width > 0:
 		var img := thumbnail(folded, png_width, 6, max_boxes)
 		if img != null and img.save_png(base + ".trace.png") != OK:
-			return DotResult.fail(DotError.CODE_IO, "Cannot write %s." % (base + ".trace.png"))
-	return DotResult.success(base + ".trace.html")
+			return GSResult.fail(GSError.CODE_IO, "Cannot write %s." % (base + ".trace.png"))
+	return GSResult.success(base + ".trace.html")

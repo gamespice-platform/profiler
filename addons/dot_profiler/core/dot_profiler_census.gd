@@ -1,6 +1,6 @@
-class_name DotProfilerCensus
+class_name GSProfilerCensus
 extends RefCounted
-## Node counts by class, and the difference between two counts (DotProfiler.census / census_diff delegate here).
+## Node counts by class, and the difference between two counts (GSProfiler.census / census_diff delegate here).
 
 
 ## Nodes under [param root] by class (a script's class_name when it has one): {name: count}.

@@ -5,16 +5,16 @@ extends Control
 
 const DIR := "user://profiler_web"
 
-var _prof: DotProfiler = null
-var _panel: DotProfilerPanel = null
+var _prof: GSProfiler = null
+var _panel: GSProfilerPanel = null
 
 
 func _ready() -> void:
-	var kit := DotMenuKit.new()
+	var kit := GSMenuKit.new()
 	theme = kit.theme()
 	add_child(kit.backdrop())
-	_prof = DotProfiler.new()
-	_prof.config = DotProfilerConfig.new()
+	_prof = GSProfiler.new()
+	_prof.config = GSProfilerConfig.new()
 	_prof.config.record_dir = DIR
 	_prof.config.overlay = true
 	add_child(_prof)
@@ -25,10 +25,10 @@ func _ready() -> void:
 	var body := VBoxContainer.new()
 	card.add_child(body)
 	body.add_child(kit.section("Performance"))
-	_panel = _prof.make_menu_panel(kit) as DotProfilerPanel
+	_panel = _prof.make_menu_panel(kit) as GSProfilerPanel
 	body.add_child(_panel)
 	_publish("")
-	if DotWeb.available() and DotWeb.query_param("press") == "1":
+	if GSWeb.available() and GSWeb.query_param("press") == "1":
 		_press.call_deferred()
 
 
@@ -47,6 +47,6 @@ func _press() -> void:
 func _publish(note: String) -> void:
 	var recent := _prof.recent_recordings(20)
 	var body := JSON.stringify({"recent": recent.size(), "saved": _prof.last_saved_path(),
-		"failures": DotWeb.sync_failures(), "note": note, "done": note != "" or true})
+		"failures": GSWeb.sync_failures(), "note": note, "done": note != "" or true})
 	print("web_record: ", body)
-	DotWeb.publish("prof", body)
+	GSWeb.publish("prof", body)

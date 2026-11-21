@@ -1,4 +1,4 @@
-class_name DotProfilerTicks
+class_name GSProfilerTicks
 extends Node
 
 ## Stamps each physics tick: its start at SceneTree.physics_frame and the end of every script's
@@ -12,7 +12,7 @@ var stamps := PackedInt64Array()
 
 
 func _init() -> void:
-	name = "DotProfilerTicks"
+	name = "GSProfilerTicks"
 	process_physics_priority = 1_000_000_000
 	process_mode = Node.PROCESS_MODE_ALWAYS
 

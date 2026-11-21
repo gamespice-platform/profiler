@@ -1,8 +1,8 @@
-class_name DotProfilerBudget
+class_name GSProfilerBudget
 extends RefCounted
 
 ## The stable naming of budget groups in the perf report (docs/perf-report.md). A budget row's [code]id[/code] is the
-## system or span name a game gave DotFrameCost; the engine's own phases are [code]engine.process[/code],
+## system or span name a game gave GSFrameCost; the engine's own phases are [code]engine.process[/code],
 ## [code]engine.physics[/code], [code]engine.render[/code] and [code]engine.wait[/code]. Its [code]parent[/code] is the
 ## row above it in the call tree and its [code]addon[/code] the owner: the longest registered prefix, else the
 ## first dotted segment of the id ([code]fc.bots[/code] is [code]fc[/code]).

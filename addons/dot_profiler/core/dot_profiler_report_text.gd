@@ -1,4 +1,4 @@
-class_name DotProfilerReportText
+class_name GSProfilerReportText
 extends RefCounted
 
 ## The text sections a version 2 report adds after the version 1 ones: frame statistics, physics ticks,
@@ -13,7 +13,7 @@ const FRAME_MIN_MS := 0.2
 const FLAGGED_LINES := 15
 ## Census classes the text lists.
 const CENSUS_LINES := 12
-## [constant DotProfilerSession.FLAG_X], kept here so this file never names the session (a script loop Godot 4.7 never frees).
+## [constant GSProfilerSession.FLAG_X], kept here so this file never names the session (a script loop Godot 4.7 never frees).
 const FLAG_X := 2.0
 
 
@@ -26,7 +26,7 @@ static func lines(r: Dictionary, top: int = 20) -> PackedStringArray:
 	out.append_array(_growth(r))
 	out.append_array(_groups(r))
 	out.append_array(_engine(r))
-	out.append_array(DotProfilerSuspects.function_lines(r))
+	out.append_array(GSProfilerSuspects.function_lines(r))
 	out.append_array(_tree(r))
 	out.append_array(_scripts(r, top))
 	out.append_array(_queries(r, top))
@@ -135,7 +135,7 @@ static func _extras(r: Dictionary) -> PackedStringArray:
 		if out.is_empty():
 			out.append("")
 			out.append("Game extras:")
-		out.append("  %s: %s" % [k, DotProfilerContext.flat(ex[k])])
+		out.append("  %s: %s" % [k, GSProfilerContext.flat(ex[k])])
 	return out
 
 
@@ -202,7 +202,7 @@ static func _queries(r: Dictionary, top: int) -> PackedStringArray:
 	if rows.is_empty():
 		return out
 	out.append("")
-	out.append("Physics queries (DotSpaceQuery / DotFrameCost.add_query):")
+	out.append("Physics queries (GSSpaceQuery / GSFrameCost.add_query):")
 	out.append("  %-24s %-18s %10s %10s %9s %8s %8s" % ["system", "kind", "calls/fr", "calls/tick", "ms/frame", "us/call", "worst"])
 	for q: Dictionary in rows.slice(0, top):
 		out.append("  %-24s %-18s %10.1f %10.1f %9.2f %8.1f %8.2f" % [String(q.system).left(24), String(q.kind).left(18),

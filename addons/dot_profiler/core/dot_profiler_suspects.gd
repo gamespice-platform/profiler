@@ -1,4 +1,4 @@
-class_name DotProfilerSuspects
+class_name GSProfilerSuspects
 extends RefCounted
 
 ## Where to look first: every traced span summed by name over the whole call tree ([code]functions[/code]) and

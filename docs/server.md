@@ -3,17 +3,17 @@
 A headless server has no menu and no overlay, so its profiler is driven from GameSpice Server's console: the server's stdin, `server.cfg`, or RCON.
 
 ```gdscript
-var prof := DotProfiler.new()
-prof.config = DotProfilerConfig.new()
+var prof := GSProfiler.new()
+prof.config = GSProfilerConfig.new()
 add_child(prof)
-var res := DotProfilerServer.new().install(prof)   # finds dot_console, dot_server, dot_query_source in DotRegistry
+var res := GSProfilerServer.new().install(prof)   # finds dot_console, dot_server, dot_query_source in GSRegistry
 ```
 
 `install` parents the controls under the profiler, so freeing the profiler takes the commands, cvars and query provider away again. Pass the console, server and query source explicitly when they are not registered. It fails with `CODE_UNSUPPORTED` when no dot-server console is found.
 
 ## Commands
 
-All are registered through `DotConsole.add_source` with the `config` admin flag, the same gate as other `sv_` settings, so they work from the console and over RCON for an admin with that flag and are refused for everyone else. None is a chat command.
+All are registered through `GSConsole.add_source` with the `config` admin flag, the same gate as other `sv_` settings, so they work from the console and over RCON for an admin with that flag and are refused for everyone else. None is a chat command.
 
 | Command | Answers |
 | --- | --- |
@@ -22,12 +22,12 @@ All are registered through `DotConsole.add_source` with the `config` admin flag,
 | `sv_profiler_status` | Watching, recording, elapsed, spikes, smoothed frame ms, the repeating beat, the directory and the last saved report. |
 | `sv_profiler_frame` | FPS, frame, process and physics ms from the engine monitors, and the smoothed physics, script, render and wait phases. |
 | `sv_profiler_hitches` | Spikes per cause, worst first, with the beat each repeats on. Empty until `profiler_enabled 1` or a recording. |
-| `sv_profiler_systems [n]` | The n costliest systems reported through `DotFrameCost`. |
+| `sv_profiler_systems [n]` | The n costliest systems reported through `GSFrameCost`. |
 | `sv_profiler_memory` | Static memory, object, node, orphan and resource counts. |
 | `sv_profiler_net` | Bytes in and out, rates since the last call, players and bots. |
 | `sv_profiler_metrics` | Everything above as one JSON line, for a tool reading over RCON. |
 
-Network bytes come from a `DotMeteredPeer` when the peer is one, otherwise from the ENet host's statistics, which this drains and sums; the plain ENet server peer has no other reader. `metered: false` means neither could be read (a WebSocket peer).
+Network bytes come from a `GSMeteredPeer` when the peer is one, otherwise from the ENet host's statistics, which this drains and sums; the plain ENet server peer has no other reader. `metered: false` means neither could be read (a WebSocket peer).
 
 ## Cvars
 
@@ -42,4 +42,4 @@ Over RCON every command above works as on the console. For a query client, `prof
 
 ## Tested
 
-`examples/profiler_selftest`'s server section installs on a real `DotConsole`, refuses RCON and chat callers without `config`, records and stops over RCON into an absolute log directory, reads every metric command and the JSON line, checks the samples in the report, the query keys with `profiler_query` off and on, and that freeing the profiler removes everything.
+`examples/profiler_selftest`'s server section installs on a real `GSConsole`, refuses RCON and chat callers without `config`, records and stops over RCON into an absolute log directory, reads every metric command and the JSON line, checks the samples in the report, the query keys with `profiler_query` off and on, and that freeing the profiler removes everything.

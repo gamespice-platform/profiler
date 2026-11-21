@@ -1,4 +1,4 @@
-class_name DotProfilerPeriod
+class_name GSProfilerPeriod
 extends RefCounted
 
 ## Finds the fixed interval spikes repeat on, so "lag every second" points at a timer, not load.
@@ -71,7 +71,7 @@ static func describe_found(found: Dictionary) -> String:
 
 
 func describe() -> String:
-	return "DotProfilerPeriod spikes=%d %s" % [_times.size(), describe_found(detect())]
+	return "GSProfilerPeriod spikes=%d %s" % [_times.size(), describe_found(detect())]
 
 
 func _fit(gaps: PackedFloat64Array, cand: float) -> Dictionary:

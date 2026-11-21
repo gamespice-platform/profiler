@@ -2,13 +2,13 @@
 
 Finds the cause of frame spikes. When a frame runs over budget it logs which system took the time and what that system was doing, names causes that repeat on a beat, draws an overlay of the top costs, and writes JSON and text reports. It can run headless for a nightly performance budget.
 
-Depends on GameSpice Core only (`DotFrameCost`, `DotHitchLog`, `DotSpaceQuery`, API level 30 or later). GameSpice Console, GameSpice Menu, GameSpice Server and GameSpice Server Query are used when present.
+Depends on GameSpice Core only (`GSFrameCost`, `GSHitchLog`, `GSSpaceQuery`, API level 30 or later). GameSpice Console, GameSpice Menu, GameSpice Server and GameSpice Server Query are used when present.
 
 ## Use
 
 ```gdscript
-var prof := DotProfiler.new()
-prof.config = DotProfilerConfig.new()
+var prof := GSProfiler.new()
+prof.config = GSProfilerConfig.new()
 add_child(prof)
 prof.bind_console(console_local)   # profiler_* cvars, record 30, profiler_stop, profiler_report
 ```
@@ -16,9 +16,9 @@ prof.bind_console(console_local)   # profiler_* cvars, record 30, profiler_stop,
 Systems report their cost:
 
 ```gdscript
-var t := DotFrameCost.now()
+var t := GSFrameCost.now()
 _rebuild_paths()
-DotFrameCost.add(&"navigation.rebuild", t, "%d paths" % n)
+GSFrameCost.add(&"navigation.rebuild", t, "%d paths" % n)
 ```
 
 A spike then logs a warning such as:
@@ -50,7 +50,7 @@ Every report starts with a `context` (OS, CPU, GPU, Godot build, window, tick ra
 
 ## Dedicated server
 
-`DotProfilerServer.new().install(prof)` adds admin-only commands to dot-server's console and RCON: `sv_profiler_record`, `sv_profiler_stop`, `sv_profiler_status`, and metric commands (frame, hitches, systems, memory, net, or all as one JSON line). Recordings go to `<log_directory>/profiles`.
+`GSProfilerServer.new().install(prof)` adds admin-only commands to dot-server's console and RCON: `sv_profiler_record`, `sv_profiler_stop`, `sv_profiler_status`, and metric commands (frame, hitches, systems, memory, net, or all as one JSON line). Recordings go to `<log_directory>/profiles`.
 
 ## Docs
 

@@ -1,4 +1,4 @@
-class_name DotProfilerCatalog
+class_name GSProfilerCatalog
 extends RefCounted
 
 ## Everything a recording can contain, as data: the menu builds its switches from it, the "what does it record"
@@ -14,15 +14,15 @@ static func rows() -> Array[Dictionary]:
 	return [
 		_b("rec_frame_stats", "Frame time statistics", GROUP_REPORT, "min, average, p50, p95, p99 and max of the frame and of each engine phase (physics, script, render, wait).", "none", ["frame_stats"]),
 		_b("rec_spikes", "Spikes and causes", GROUP_REPORT, "every frame over the budget with the system or engine phase blamed, hints (shader compiles, new nodes, log lines) and the beat spikes repeat on.", "none", ["spikes", "causes"]),
-		_b("rec_systems", "System costs", GROUP_REPORT, "ms, calls and worst call of every system reported through DotFrameCost.", "none", ["systems"]),
+		_b("rec_systems", "System costs", GROUP_REPORT, "ms, calls and worst call of every system reported through GSFrameCost.", "none", ["systems"]),
 		_b("rec_phases", "Engine phase totals", GROUP_REPORT, "total time in physics, script, render and wait.", "none", ["phases"]),
 		_b("rec_physics_ticks", "Physics ticks per frame", GROUP_REPORT, "ticks, catch-up frames, spiral-of-death frames and the per-frame histogram.", "none", ["physics_ticks"]),
 		_b("rec_queries", "Physics queries", GROUP_REPORT, "raycasts, shape casts and point queries per system: ms, calls, per frame and per tick.", "none", ["queries", "traced_queries"]),
 		_b("rec_growth", "Growth", GROUP_REPORT, "first to last value of nodes, objects, orphans, resources and memory, and per minute.", "none", ["growth"]),
 		_b("rec_overhead", "Profiler overhead", GROUP_REPORT, "the profiler's own cost per frame and spans timed per frame.", "none", ["overhead"]),
 		_b("rec_suspects", "Suspects and functions", GROUP_REPORT, "the costliest spans by self time against the tick budget and the per-unit target, and every span summed by name with self, total, calls and cost per call, tick and unit.", "none", ["suspects", "functions", "budget"]),
-		_b("rec_engine", "Engine work per tick", GROUP_REPORT, "queries, nodes entering and leaving the tree, growth of objects, resources and static memory, and counts a game reports (DotProfilerCounts), all per tick.", "none", ["engine"]),
-		_b("trace", "Call tree (span tracing)", GROUP_COLLECT, "times every span reported through DotFrameCost so the report has a tree below the systems, plus folded stacks for a flamegraph.", "medium", ["tree", "traced_queries"]),
+		_b("rec_engine", "Engine work per tick", GROUP_REPORT, "queries, nodes entering and leaving the tree, growth of objects, resources and static memory, and counts a game reports (GSProfilerCounts), all per tick.", "none", ["engine"]),
+		_b("trace", "Call tree (span tracing)", GROUP_COLLECT, "times every span reported through GSFrameCost so the report has a tree below the systems, plus folded stacks for a flamegraph.", "medium", ["tree", "traced_queries"]),
 		_b("monitors", "Engine monitors", GROUP_COLLECT, "every frame: process and physics ms, navigation ms, active bodies, pairs, islands, draw calls, objects, primitives, nodes, orphans, memory, video memory.", "low", ["monitors"]),
 		_n("sample_hz", "Metric samples per second", GROUP_COLLECT, "memory, object and node counts (a server adds players, bots and network) sampled this many times a second; 0 takes none.", "low", ["samples"], 0.0, 1000.0, 0.5),
 		_n("worst_frames", "Worst frames kept whole", GROUP_COLLECT, "the slowest N frames with their full call tree, queries and monitors; 0 keeps none.", "low", ["worst_frames"], 0.0, 10000.0, 1.0),
@@ -35,7 +35,7 @@ static func rows() -> Array[Dictionary]:
 		_b("perf_render_estimate", "Render cost estimate", GROUP_EXTRA, "adds an estimated cost (draws plus triangles, labelled an estimate) to each draw scan row, where per-material GPU time is unavailable.", "low", ["perf"]),
 		_n("perf_signal_top", "Signal fan-out rows", GROUP_EXTRA, "signals listed in the perf report's fan-out table (emits x receivers); 0 keeps every signal.", "low", ["perf"], 0.0, 200.0, 5.0),
 		_n("perf_baseline_noise_pct", "Baseline noise floor (%)", GROUP_EXTRA, "percent change below which a baseline row counts as noise; 0 lists every difference.", "low", ["perf"], 0.0, 100.0, 1.0),
-		_n("perf_load_min_ms", "Load time floor (ms)", GROUP_EXTRA, "asset loads reported through DotProfilerLoads shorter than this are left out; 0 keeps every one.", "low", ["perf"], 0.0, 1000.0, 5.0),
+		_n("perf_load_min_ms", "Load time floor (ms)", GROUP_EXTRA, "asset loads reported through GSProfilerLoads shorter than this are left out; 0 keeps every one.", "low", ["perf"], 0.0, 1000.0, 5.0),
 		_b("perf_trace", "Call-trace page and thumbnail", GROUP_EXTRA, "writes perf-<stamp>.trace.html (an SVG icicle graph) and a PNG thumbnail beside each perf report, made from the folded stacks.", "low", ["perf"]),
 		_b("perf_gpu_time", "GPU time per viewport and pass", GROUP_EXTRA, "reads measured GPU ms per viewport and per render pass into the perf report (render.gpu); unavailable on web and Compatibility, which the report says.", "low", ["perf"]),
 		_b("census", "Node census", GROUP_EXTRA, "nodes counted by class when the recording starts and stops, so the report says which kinds grew.", "low", ["census"]),
@@ -54,7 +54,7 @@ static func row(key: String) -> Dictionary:
 
 
 ## True when [param r]'s setting is on in [param config].
-static func is_on(r: Dictionary, config: DotProfilerConfig) -> bool:
+static func is_on(r: Dictionary, config: GSProfilerConfig) -> bool:
 	var v: Variant = config.get(r.key)
 	match r.kind:
 		"bool":
@@ -65,7 +65,7 @@ static func is_on(r: Dictionary, config: DotProfilerConfig) -> bool:
 
 
 ## A line per setting a person can read: on/off, name, what it records, cost and the report keys it adds.
-static func lines(config: DotProfilerConfig) -> PackedStringArray:
+static func lines(config: GSProfilerConfig) -> PackedStringArray:
 	var out := PackedStringArray()
 	var group := ""
 	for r in rows():
@@ -85,7 +85,7 @@ static func lines(config: DotProfilerConfig) -> PackedStringArray:
 
 
 ## Sets every switch to [param on] (numbers and text go to a useful value or zero); true for the cheap ones only when [param cheap_only].
-static func set_all(config: DotProfilerConfig, on: bool, cheap_only: bool = false) -> void:
+static func set_all(config: GSProfilerConfig, on: bool, cheap_only: bool = false) -> void:
 	for r in rows():
 		if cheap_only and r.cost in ["high", "medium"]:
 			continue
@@ -112,7 +112,7 @@ static func _on_value(r: Dictionary) -> String:
 
 
 ## Removes from [param report] the keys of every report section that is switched off in [param config].
-static func strip(report: Dictionary, config: DotProfilerConfig) -> void:
+static func strip(report: Dictionary, config: GSProfilerConfig) -> void:
 	for r in rows():
 		if r.group != GROUP_REPORT or bool(config.get(r.key)):
 			continue

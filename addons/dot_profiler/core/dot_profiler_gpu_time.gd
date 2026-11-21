@@ -1,4 +1,4 @@
-class_name DotProfilerGpuTime
+class_name GSProfilerGpuTime
 extends RefCounted
 
 ## Measured GPU time per viewport and per render pass while recording (perf report `render.gpu`).

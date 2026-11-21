@@ -1,4 +1,4 @@
-class_name DotProfilerMetrics
+class_name GSProfilerMetrics
 extends RefCounted
 
 ## The engine's own numbers a profiler reports beside its spikes: frame times, memory and object counts, network bytes.
@@ -38,7 +38,7 @@ var _last_usec := 0
 
 
 ## Total bytes in and out on [param peer] and the rates since the last call, or {"metered": false} when it cannot be read.
-## A [DotMeteredPeer] is read directly; an ENet peer's host statistics are drained and summed here, so nothing else may pop them.
+## A [GSMeteredPeer] is read directly; an ENet peer's host statistics are drained and summed here, so nothing else may pop them.
 func net(peer: MultiplayerPeer) -> Dictionary:
 	if not _read(peer):
 		return {"metered": false}
@@ -56,7 +56,7 @@ func net(peer: MultiplayerPeer) -> Dictionary:
 func _read(peer: MultiplayerPeer) -> bool:
 	if peer == null:
 		return false
-	var meter := DotMeteredPeer.of(peer)
+	var meter := GSMeteredPeer.of(peer)
 	if meter != null:
 		_in = meter.bytes_in
 		_out = meter.bytes_out

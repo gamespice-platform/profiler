@@ -1,4 +1,4 @@
-class_name DotProfilerSession
+class_name GSProfilerSession
 extends RefCounted
 
 ## The deep half of one recording: the call tree, physics ticks per frame, engine monitors, physics queries
@@ -32,33 +32,33 @@ const RENDER_MONITORS: Array = [
 ## Monitors whose first-to-last change the report gives as growth.
 const GROWTH: Array[String] = ["nodes", "objects", "orphan_nodes", "resources", "static_mb", "video_mb", "texture_mb", "buffer_mb"]
 ## A timeline frame is flagged when it is this many times the running average and at least FLAG_MIN_MS above it.
-const FLAG_X := DotProfilerReportText.FLAG_X
+const FLAG_X := GSProfilerReportText.FLAG_X
 const FLAG_MIN_MS := 2.0
 ## Flagged frames kept, the slowest when there are more.
 const FLAG_KEEP := 200
 
-var tree := DotProfilerTree.new()
+var tree := GSProfilerTree.new()
 ## Read [constant MONITORS] each frame.
 var monitors := true
 ## Frames kept whole, worst first.
 var worst_keep := 5
-## Keep each frame's time and flag frames that jump above the running average ([member DotProfilerConfig.timeline]).
+## Keep each frame's time and flag frames that jump above the running average ([member GSProfilerConfig.timeline]).
 var timeline := false
 ## Budget in ms; a timeline frame over it is always flagged.
 var budget_ms := 33.0
 ## Read [constant RENDER_MONITORS] and the draw split of [member viewport] each frame.
 var render_detail := false
 var viewport := RID()
-## Counted each frame: [{group, prefix, count: Callable}] ([method DotProfiler.add_counter]).
+## Counted each frame: [{group, prefix, count: Callable}] ([method GSProfiler.add_counter]).
 var counters: Array[Dictionary] = []
 ## Read render cpu and gpu ms of [member viewport] each frame, without the rest of [member render_detail].
 var render_time := false
 ## What costs are divided by (players): {name, count: Callable}, read each frame; empty is none.
 var unit: Dictionary = {}
-## Nodes that entered and left the tree while recording ([DotProfiler] counts them).
+## Nodes that entered and left the tree while recording ([GSProfiler] counts them).
 var nodes_added := 0
 var nodes_removed := 0
-## Totals a game counted through [DotProfilerCounts]: {name: total}.
+## Totals a game counted through [GSProfilerCounts]: {name: total}.
 var counts: Dictionary = {}
 
 var _frame_ms := PackedFloat32Array()
@@ -120,7 +120,7 @@ static func render_detail_keys() -> PackedStringArray:
 	return out
 
 
-## Adds one DotHitchLog record and the physics ticks stamped in its window ([method DotProfilerTicks.take]).
+## Adds one GSHitchLog record and the physics ticks stamped in its window ([method GSProfilerTicks.take]).
 func add(rec: Dictionary, ticks: PackedInt64Array) -> void:
 	var ms: float = rec.get("ms", 0.0)
 	var _a := _frame_ms.append(ms)
@@ -260,7 +260,7 @@ func _engine(q_rows: Array, frames: int) -> Dictionary:
 		"static_kb_grown_per_tick": grew[2] / 1024.0 / ticks, "static_kb_net": net[2] / 1024.0,
 		"static_peak_mb": OS.get_static_memory_peak_usage() / 1048576.0,
 		"counts": named,
-		"not_counted": "signal emits and single allocations: the engine counts neither in a release build; a game reports them with DotProfilerCounts.add",
+		"not_counted": "signal emits and single allocations: the engine counts neither in a release build; a game reports them with GSProfilerCounts.add",
 	}
 
 
@@ -292,8 +292,8 @@ static func stats_of(values: PackedFloat32Array) -> Dictionary:
 	var total := 0.0
 	for v in s:
 		total += v
-	return {"min": s[0], "avg": total / s.size(), "p50": DotProfilerReport.percentile(s, 0.5),
-		"p95": DotProfilerReport.percentile(s, 0.95), "p99": DotProfilerReport.percentile(s, 0.99), "max": s[-1]}
+	return {"min": s[0], "avg": total / s.size(), "p50": GSProfilerReport.percentile(s, 0.5),
+		"p95": GSProfilerReport.percentile(s, 0.95), "p99": GSProfilerReport.percentile(s, 0.99), "max": s[-1]}
 
 
 func _add_render() -> void:

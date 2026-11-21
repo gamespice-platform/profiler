@@ -1,10 +1,10 @@
 @icon("res://addons/dot_profiler/icon.svg")
-class_name DotProfiler
+class_name GSProfiler
 extends Node
 
 ## Watches every frame, names the system behind each over budget, spots spikes on a fixed beat and
 ## records reports. Off until profiler_enabled 1; [method bind_console] adds the profiler_* vars.
-## Systems report through [DotFrameCost]; a frame with none is blamed on the slowest engine phase.
+## Systems report through [GSFrameCost]; a frame with none is blamed on the slowest engine phase.
 
 const CHANNEL := "dot.profiler"
 const SERVICE := &"dot_profiler"
@@ -15,7 +15,7 @@ const CAPTURE_ACTION := &"profiler_capture"
 ## Opens and closes the options window over the game; bound to Shift+F10 by [method enable_menu_key].
 const MENU_ACTION := &"profiler_menu"
 
-# The UI scripts name DotProfiler back, so they are loaded by uid at use: preloading them would put the
+# The UI scripts name GSProfiler back, so they are loaded by uid at use: preloading them would put the
 # profiler and its UI in one script loop, which Godot 4.7 never frees.
 const _OVERLAY_UID := "uid://dhypu2jlflde8"
 const _PANEL_UID := "uid://cj8kqa4iwjy0p"
@@ -27,25 +27,25 @@ signal recording_started(seconds: float)
 ## A perf upload finished (ok, HTTP status or 0, message without the token).
 signal perf_uploaded(ok: bool, status: int, message: String)
 ## [param result] is [method stop_recording]'s: its value is the JSON path.
-signal recording_finished(result: DotResult)
+signal recording_finished(result: GSResult)
 
 ## The settings; made from defaults (then file, environment, command line) when left empty.
-@export var config: DotProfilerConfig
+@export var config: GSProfilerConfig
 ## The layered config file read in [method Node._ready]; "" skips the file layer.
 @export var config_file: String = ""
 ## Registers this node as [constant SERVICE] so menus and tools find it without a path.
 @export var register_as_service: bool = true
 
 ## Returns one metrics sample (a Dictionary) for a recording, taken profiler_sample_hz times a second.
-## The default is memory and object counts; [DotProfilerServer] adds network, players and bots.
-var sampler: Callable = DotProfilerMetrics.memory
+## The default is memory and object counts; [GSProfilerServer] adds network, players and bots.
+var sampler: Callable = GSProfilerMetrics.memory
 
-var _hitch: DotHitchLog = null
+var _hitch: GSHitchLog = null
 var _overlay: CanvasLayer = null
-var _graph_data := DotProfilerGraphData.new()
-var _net := DotProfilerNet.new()
+var _graph_data := GSProfilerGraphData.new()
+var _net := GSProfilerNet.new()
 var _periods := {}
-var _all_period := DotProfilerPeriod.new()
+var _all_period := GSProfilerPeriod.new()
 var _last_warn := {}
 var _suppressed := {}
 var _avg_systems := {}
@@ -59,7 +59,7 @@ var _recording := false
 var _rec_started_usec := 0
 var _rec_seconds := 0.0
 var _unlimited := false
-var _gpu: DotProfilerGpuTime = null
+var _gpu: GSProfilerGpuTime = null
 var _rec_frames := PackedFloat32Array()
 var _rec_spikes: Array = []
 var _rec_systems := {}
@@ -70,8 +70,8 @@ var _last_saved := ""
 var _last_perf := ""
 var _perf_opts: Dictionary = {}
 var _stop_pending := false
-var _session: DotProfilerSession = null
-var _ticks: DotProfilerTicks = null
+var _session: GSProfilerSession = null
+var _ticks: GSProfilerTicks = null
 var _deep := {}
 var _counters: Array[Dictionary] = []
 var _contexts: Dictionary = {}
@@ -81,7 +81,7 @@ var _hooks: Array[Dictionary] = []
 var _force_render := false
 var _context := {}
 var _last_extras := {}
-var _scripts: DotProfilerScripts = null
+var _scripts: GSProfilerScripts = null
 var _script_report := {}
 var _census_start := {}
 var _census := {}
@@ -89,15 +89,15 @@ var _census := {}
 
 func _ready() -> void:
 	if config == null:
-		config = DotProfilerConfig.new()
+		config = GSProfilerConfig.new()
 		var res := config.load_layered(config_file)
 		if not res.ok:
-			DotLog.warn(CHANNEL, "profiler settings: %s; using defaults" % res.error.message)
-			config = DotProfilerConfig.new()
+			GSLog.warn(CHANNEL, "profiler settings: %s; using defaults" % res.error.message)
+			config = GSProfilerConfig.new()
 	var _loaded := load_ui_prefs()
 	config.changed.connect(_apply)
 	if register_as_service:
-		DotRegistry.register(SERVICE, self)
+		GSRegistry.register(SERVICE, self)
 	set_process_input(InputMap.has_action(CAPTURE_ACTION) or InputMap.has_action(MENU_ACTION))
 	_apply()
 
@@ -105,9 +105,9 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	_unhook_nodes()
 	_stop_watch()
-	DotFrameCost.reset()
+	GSFrameCost.reset()
 	if register_as_service:
-		DotRegistry.unregister_instance(SERVICE, self)
+		GSRegistry.unregister_instance(SERVICE, self)
 
 
 ## True while frames are being watched: enabled, overlay shown, or recording.
@@ -141,11 +141,11 @@ func last_saved_path() -> String:
 
 ## Starts a recording of [param seconds] (the config's default when 0 or less); stops itself when done.
 ## With [param open_ended] it has no length at all and runs until [method stop_recording] (negative seconds fail).
-func start_recording(seconds: float = 0.0, open_ended: bool = false) -> DotResult:
+func start_recording(seconds: float = 0.0, open_ended: bool = false) -> GSResult:
 	if _recording:
-		return DotResult.fail(DotError.CODE_STATE, "A recording is already running (%.0f s in)." % elapsed_s())
+		return GSResult.fail(GSError.CODE_STATE, "A recording is already running (%.0f s in)." % elapsed_s())
 	if seconds < 0.0 or is_nan(seconds) or is_inf(seconds):
-		return DotResult.fail(DotError.CODE_INVALID, "Recording length %s is invalid; use a positive number of seconds (open_ended for no limit)." % seconds)
+		return GSResult.fail(GSError.CODE_INVALID, "Recording length %s is invalid; use a positive number of seconds (open_ended for no limit)." % seconds)
 	_unlimited = open_ended
 	_rec_seconds = 0.0 if open_ended else (seconds if seconds > 0.0 else config.record_seconds)
 	_recording = true
@@ -156,7 +156,7 @@ func start_recording(seconds: float = 0.0, open_ended: bool = false) -> DotResul
 	_rec_phases = {"physics": 0.0, "script": 0.0, "render": 0.0, "wait": 0.0}
 	_rec_samples = []
 	_next_sample_usec = 0
-	_session = DotProfilerSession.new()
+	_session = GSProfilerSession.new()
 	_session.monitors = config.monitors
 	_session.worst_keep = config.worst_frames
 	_session.timeline = config.timeline
@@ -167,10 +167,10 @@ func start_recording(seconds: float = 0.0, open_ended: bool = false) -> DotResul
 	_session.render_time = config.render_time
 	_session.unit = _unit_counter()
 	_session.begin()
-	DotProfilerCounts.begin()
-	DotProfilerNetCost.begin()
-	DotProfilerSignals.begin()
-	DotProfilerLoads.begin(config.perf_load_min_ms)
+	GSProfilerCounts.begin()
+	GSProfilerNetCost.begin()
+	GSProfilerSignals.begin()
+	GSProfilerLoads.begin(config.perf_load_min_ms)
 	if not get_tree().node_added.is_connected(_on_node_added):
 		get_tree().node_added.connect(_on_node_added)
 		get_tree().node_removed.connect(_on_node_removed)
@@ -181,66 +181,66 @@ func start_recording(seconds: float = 0.0, open_ended: bool = false) -> DotResul
 	_census_start = census() if config.census else {}
 	_script_report = {}
 	if config.script_top > 0:
-		_scripts = DotProfilerScripts.new()
+		_scripts = GSProfilerScripts.new()
 		var sr := _scripts.start()
 		if not sr.ok:
 			_scripts = null
 			_script_report = {"ok": false, "reason": sr.error.message}
-			DotLog.warn(CHANNEL, "script functions off: %s" % sr.error.message)
+			GSLog.warn(CHANNEL, "script functions off: %s" % sr.error.message)
 	if _ticks == null:
-		_ticks = DotProfilerTicks.new()
+		_ticks = GSProfilerTicks.new()
 		add_child(_ticks)
 	var _t := _ticks.take()
 	if _unlimited and config.deep:
-		DotLog.warn(CHANNEL, "deep mode off: native sampling needs a recording length and this one is open-ended")
+		GSLog.warn(CHANNEL, "deep mode off: native sampling needs a recording length and this one is open-ended")
 		_deep = {"ok": false, "reason": "open-ended recording"}
 	else:
 		_deep = _start_deep(_rec_seconds)
 	_gpu = null
 	if config.perf_gpu_time and config.perf_report:
-		_gpu = DotProfilerGpuTime.new()
+		_gpu = GSProfilerGpuTime.new()
 		_gpu.begin(get_tree().root, get_viewport().get_viewport_rid())
 	_apply()
 	if _unlimited:
-		DotLog.info(CHANNEL, "recording until stopped (budget %.1f ms)" % config.budget_ms)
+		GSLog.info(CHANNEL, "recording until stopped (budget %.1f ms)" % config.budget_ms)
 	else:
-		DotLog.info(CHANNEL, "recording %.0f s of frames (budget %.1f ms)" % [_rec_seconds, config.budget_ms])
+		GSLog.info(CHANNEL, "recording %.0f s of frames (budget %.1f ms)" % [_rec_seconds, config.budget_ms])
 	recording_started.emit(_rec_seconds)
-	return DotResult.success(_rec_seconds)
+	return GSResult.success(_rec_seconds)
 
 
 ## Ends the recording and writes it; the value is the JSON path.
-func stop_recording() -> DotResult:
+func stop_recording() -> GSResult:
 	if not _recording:
-		return DotResult.fail(DotError.CODE_STATE, "No recording is running.")
+		return GSResult.fail(GSError.CODE_STATE, "No recording is running.")
 	_recording = false
 	if _unlimited:
 		_rec_seconds = (Time.get_ticks_usec() - _rec_started_usec) / 1.0e6
 		_unlimited = false
 	_unhook_nodes()
 	if _session != null:
-		_session.counts = DotProfilerCounts.end()
+		_session.counts = GSProfilerCounts.end()
 	if _scripts != null:
 		_script_report = _scripts.stop(config.script_top, _rec_frames.size(),
-			DotProfilerConfig.parse_buckets(config.script_buckets))
+			GSProfilerConfig.parse_buckets(config.script_buckets))
 		_scripts = null
 	if config.census and not _census_start.is_empty():
 		_census = census_diff(_census_start, census())
-	var net_rows := DotProfilerNetCost.end(_rec_seconds, config.perf_top)
-	var load_rows := DotProfilerLoads.end(config.perf_top)
-	var signal_rows := DotProfilerSignals.end(_rec_seconds, config.perf_signal_top)
+	var net_rows := GSProfilerNetCost.end(_rec_seconds, config.perf_top)
+	var load_rows := GSProfilerLoads.end(config.perf_top)
+	var signal_rows := GSProfilerSignals.end(_rec_seconds, config.perf_signal_top)
 	var report := build_report()
 	_force_render = false
-	var res := DotProfilerReport.write(report, config.record_dir, config.keep_recordings,
+	var res := GSProfilerReport.write(report, config.record_dir, config.keep_recordings,
 		_session.folded() if _session != null else "")
 	if config.perf_report and res.ok:
 		var opts := _perf_opts.duplicate()
 		if _gpu != null:
 			opts["gpu_time"] = _gpu.report(config.perf_top)
 		var folded := _session.folded() if _session != null else ""
-		_last_perf = DotProfilerPerfReport.save(get_tree(), config, report, net_rows, load_rows, opts, CHANNEL, signal_rows, folded)
+		_last_perf = GSProfilerPerfReport.save(get_tree(), config, report, net_rows, load_rows, opts, CHANNEL, signal_rows, folded)
 		if _last_perf != "" and config.perf_upload_url != "":
-			DotProfilerUpload.upload_report(self, config, _last_perf, folded, CHANNEL, perf_uploaded.emit)
+			GSProfilerUpload.upload_report(self, config, _last_perf, folded, CHANNEL, perf_uploaded.emit)
 	_gpu = null
 	if _ticks != null:
 		_ticks.queue_free()
@@ -248,11 +248,11 @@ func stop_recording() -> DotResult:
 	_apply()
 	if res.ok:
 		_last_saved = res.value
-		DotLog.info(CHANNEL, "profile saved to %s (%d frames, %d spikes, p99 %.1f ms); text report beside it (.txt)" % [
+		GSLog.info(CHANNEL, "profile saved to %s (%d frames, %d spikes, p99 %.1f ms); text report beside it (.txt)" % [
 			ProjectSettings.globalize_path(_last_saved), report.frames, report.spike_count, report.p99_ms])
 		_diff_reference(res.value)
 	else:
-		DotLog.warn(CHANNEL, "profile not saved: %s" % res.error.message)
+		GSLog.warn(CHANNEL, "profile not saved: %s" % res.error.message)
 	recording_finished.emit(res)
 	return res
 
@@ -273,11 +273,11 @@ func build_report() -> Dictionary:
 	var meta := {
 		"budget_ms": config.budget_ms, "seconds": _rec_seconds,
 		"scene": scene.scene_file_path if scene != null else "",
-		"period": DotProfilerPeriod.describe_found(_all_period.detect()),
+		"period": GSProfilerPeriod.describe_found(_all_period.detect()),
 		"sample_hz": config.sample_hz, "samples": _rec_samples, "deep": _deep}
 	if _session != null:
 		if _recording:
-			_session.counts = DotProfilerCounts.peek()
+			_session.counts = GSProfilerCounts.peek()
 		meta.merge(_session.to_report())
 		meta["context"] = _context
 		meta["extras"] = _read_extras()
@@ -285,11 +285,11 @@ func build_report() -> Dictionary:
 		meta["script_functions"] = _script_report
 	if not _census.is_empty():
 		meta["census"] = _census
-	var report := DotProfilerReport.build(_rec_frames, _rec_spikes, _rec_systems, _rec_phases, meta)
-	DotProfilerSession.attach_group_systems(report)
+	var report := GSProfilerReport.build(_rec_frames, _rec_spikes, _rec_systems, _rec_phases, meta)
+	GSProfilerSession.attach_group_systems(report)
 	if config.suspects_top > 0:
-		DotProfilerSuspects.attach(report, config.suspects_top, config.unit_target_us)
-	DotProfilerCatalog.strip(report, config)
+		GSProfilerSuspects.attach(report, config.suspects_top, config.unit_target_us)
+	GSProfilerCatalog.strip(report, config)
 	return report
 
 
@@ -313,11 +313,11 @@ func extras() -> Dictionary:
 
 
 func _read_context() -> Dictionary:
-	var out := {"machine": DotProfilerContext.machine(), "build": DotProfilerContext.build()}
-	out["launch"] = DotProfilerContext.launch()
+	var out := {"machine": GSProfilerContext.machine(), "build": GSProfilerContext.build()}
+	out["launch"] = GSProfilerContext.launch()
 	var local: Object = _console.get_ref() if _console != null else null
 	if local != null:
-		out["cvars"] = DotProfilerContext.cvars(local, _cvars_first)
+		out["cvars"] = GSProfilerContext.cvars(local, _cvars_first)
 	for k: String in _contexts:
 		out[k] = (_contexts[k] as Callable).call()
 	return out
@@ -340,11 +340,11 @@ func _diff_reference(saved_json: String) -> void:
 		return
 	var res := compare_recordings(config.reference, saved_json)
 	if not res.ok:
-		DotLog.warn(CHANNEL, "reference diff: %s" % res.error.message)
+		GSLog.warn(CHANNEL, "reference diff: %s" % res.error.message)
 		return
 	var text := "\n".join(res.value as PackedStringArray)
-	var _w := DotPaths.write_text(saved_json.get_basename() + ".diff.txt", text + "\n")
-	DotLog.info(CHANNEL, "diff against %s (saved to %s.diff.txt):\n%s" % [config.reference.get_file(), saved_json.get_basename(), text])
+	var _w := GSPaths.write_text(saved_json.get_basename() + ".diff.txt", text + "\n")
+	GSLog.info(CHANNEL, "diff against %s (saved to %s.diff.txt):\n%s" % [config.reference.get_file(), saved_json.get_basename(), text])
 
 
 ## Adds a count reported beside the cost of systems starting with [param prefix] (e.g. bots and "fc.bot").
@@ -363,12 +363,12 @@ func remove_counter(group: String) -> void:
 
 ## Nodes in the tree by class (a script's class_name when it has one): {name: count}.
 func census() -> Dictionary:
-	return DotProfilerCensus.count(get_tree().root)
+	return GSProfilerCensus.count(get_tree().root)
 
 
 ## Two [method census] results as {start_nodes, end_nodes, classes: [{class, start, end, delta}]}, biggest change first.
 static func census_diff(a: Dictionary, b: Dictionary) -> Dictionary:
-	return DotProfilerCensus.diff(a, b)
+	return GSProfilerCensus.diff(a, b)
 
 
 func _on_node_added(_node: Node) -> void:
@@ -401,7 +401,7 @@ func _unit_counter() -> Dictionary:
 
 func _recording_counters() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	for g in DotProfilerConfig.parse_groups(config.groups):
+	for g in GSProfilerConfig.parse_groups(config.groups):
 		var made := false
 		for c: Dictionary in _counters:
 			if c.group == g.group:
@@ -413,13 +413,13 @@ func _recording_counters() -> Array[Dictionary]:
 
 
 ## Starts a capture of profiler_capture_seconds, or stops the running recording and writes it: the one-key profile.
-func toggle_capture() -> DotResult:
+func toggle_capture() -> GSResult:
 	if _recording:
 		return stop_recording()
 	_force_render = true
 	var res := start_recording(config.capture_seconds, config.capture_seconds == 0.0)
 	if res.ok:
-		DotLog.info(CHANNEL, "capture started (%s); press the capture key or run profiler_stop to end it%s. Reports go to %s" % [
+		GSLog.info(CHANNEL, "capture started (%s); press the capture key or run profiler_stop to end it%s. Reports go to %s" % [
 			"until stopped" if config.capture_seconds == 0.0 else "%.0f s" % config.capture_seconds,
 			"" if config.capture_seconds == 0.0 else " early", ProjectSettings.globalize_path(config.record_dir)])
 	else:
@@ -462,29 +462,29 @@ func _input(event: InputEvent) -> void:
 	elif event.is_action_pressed(CAPTURE_ACTION, false, true):
 		var res := toggle_capture()
 		if not res.ok:
-			DotLog.warn(CHANNEL, "capture: %s" % res.error.message)
+			GSLog.warn(CHANNEL, "capture: %s" % res.error.message)
 
 
 ## Compares two recordings (JSON paths); with none, the two newest. The value is the text lines.
-func compare_recordings(path_a: String = "", path_b: String = "") -> DotResult:
+func compare_recordings(path_a: String = "", path_b: String = "") -> GSResult:
 	if path_b == "":
 		var recent := recent_recordings(2)
 		if path_a != "":
 			if recent.is_empty():
-				return DotResult.fail(DotError.CODE_STATE, "No recording in %s to compare %s with." % [config.record_dir, path_a])
+				return GSResult.fail(GSError.CODE_STATE, "No recording in %s to compare %s with." % [config.record_dir, path_a])
 			path_b = recent[0].path
 		else:
 			if recent.size() < 2:
-				return DotResult.fail(DotError.CODE_STATE, "Two recordings are needed to compare; %d found in %s." % [recent.size(), config.record_dir])
+				return GSResult.fail(GSError.CODE_STATE, "Two recordings are needed to compare; %d found in %s." % [recent.size(), config.record_dir])
 			path_a = recent[1].path
 			path_b = recent[0].path
-	var a := DotProfilerCompare.load_report(path_a)
+	var a := GSProfilerCompare.load_report(path_a)
 	if not a.ok:
 		return a
-	var b := DotProfilerCompare.load_report(path_b)
+	var b := GSProfilerCompare.load_report(path_b)
 	if not b.ok:
 		return b
-	return DotResult.success(DotProfilerCompare.to_text(DotProfilerCompare.compare(a.value, b.value),
+	return GSResult.success(GSProfilerCompare.to_text(GSProfilerCompare.compare(a.value, b.value),
 		path_a.get_file(), path_b.get_file()))
 
 
@@ -492,11 +492,11 @@ func _start_deep(seconds: float) -> Dictionary:
 	if not config.deep:
 		return {}
 	var dir := ProjectSettings.globalize_path(config.record_dir)
-	var made := DotPaths.ensure_dir(config.record_dir)
+	var made := GSPaths.ensure_dir(config.record_dir)
 	var file := dir.path_join("perf-%d.data" % Time.get_unix_time_from_system())
-	var res := DotProfilerDeep.start(seconds, file) if made.ok else made
+	var res := GSProfilerDeep.start(seconds, file) if made.ok else made
 	if not res.ok:
-		DotLog.warn(CHANNEL, "deep mode off: %s" % res.error.message)
+		GSLog.warn(CHANNEL, "deep mode off: %s" % res.error.message)
 		return {"ok": false, "reason": res.error.message}
 	var info: Dictionary = res.value
 	info["ok"] = true
@@ -505,7 +505,7 @@ func _start_deep(seconds: float) -> Dictionary:
 
 ## Recordings already written, newest first, at most [param n].
 func recent_recordings(n: int = 8) -> Array[Dictionary]:
-	return DotProfilerReport.list(config.record_dir).slice(0, n)
+	return GSProfilerReport.list(config.record_dir).slice(0, n)
 
 
 ## The [param n] costliest systems, smoothed: [{system, ms}]; engine phases fill in when no system reports.
@@ -529,14 +529,14 @@ func spikes_by_cause() -> Dictionary:
 	var out := {}
 	for c: String in _by_cause:
 		out[c] = _by_cause[c].duplicate()
-		out[c]["period"] = DotProfilerPeriod.describe_found(_periods[c].detect()) if _periods.has(c) else ""
+		out[c]["period"] = GSProfilerPeriod.describe_found(_periods[c].detect()) if _periods.has(c) else ""
 	return out
 
 
 ## Smoothed frame time in ms, spikes seen, the last spike and the repeating beat, for the overlay.
 func status() -> Dictionary:
 	return {"ms": _avg_ms, "spikes": _spikes_seen, "last": _last_spike,
-		"period": DotProfilerPeriod.describe_found(_all_period.detect()), "recording": _recording,
+		"period": GSProfilerPeriod.describe_found(_all_period.detect()), "recording": _recording,
 		"elapsed_s": elapsed_s(), "budget_ms": config.budget_ms}
 
 
@@ -544,7 +544,7 @@ func status() -> Dictionary:
 func period_of(cause: String = "") -> Dictionary:
 	if cause == "":
 		return _all_period.detect()
-	var p: DotProfilerPeriod = _periods.get(cause)
+	var p: GSProfilerPeriod = _periods.get(cause)
 	return p.detect() if p != null else {}
 
 
@@ -553,7 +553,7 @@ func set_overlay_visible(on: bool) -> void:
 	var _r := config.set_text("overlay", "1" if on else "0")
 
 
-## Registers profiler_* variables and the record, stop and report commands on a GameSpice Console [code]DotConsoleLocal[/code].
+## Registers profiler_* variables and the record, stop and report commands on a GameSpice Console [code]GSConsoleLocal[/code].
 func bind_console(local: Object) -> void:
 	if local == null or not local.has_method(&"add_command"):
 		return
@@ -561,7 +561,7 @@ func bind_console(local: Object) -> void:
 	# After this frame, when the game has added its variables: what a later report calls changed is measured from here.
 	_baseline_cvars.call_deferred()
 	for key in config.config_keys():
-		local.call(&"add_var", DotProfilerConfig.cvar_name(key), "Profiler: %s." % key,
+		local.call(&"add_var", GSProfilerConfig.cvar_name(key), "Profiler: %s." % key,
 			config.text_of.bind(key), _set_from_console.bind(key))
 	var rec := func(args: PackedStringArray) -> Variant:
 		return start_recording(args[0].to_float() if not args.is_empty() else 0.0)
@@ -574,7 +574,7 @@ func bind_console(local: Object) -> void:
 	local.call(&"add_command", &"profiler_capture", "Start a capture of profiler_capture_seconds, or stop and write it.",
 		func(_a: PackedStringArray) -> Variant: return toggle_capture())
 	local.call(&"add_command", &"profiler_menu", "Open or close the profiler options window (also Shift+F10).",
-		func(_a: PackedStringArray) -> Variant: return DotResult.success("open" if toggle_menu() else "closed"))
+		func(_a: PackedStringArray) -> Variant: return GSResult.success("open" if toggle_menu() else "closed"))
 	local.call(&"add_command", &"profiler_compare", "Compare recordings (JSON paths): two paths, one path against the newest, none for the two newest (or profiler_reference against the newest).",
 		func(a: PackedStringArray) -> Variant: return compare_recordings(a[0] if not a.is_empty() else config.reference, a[1] if a.size() > 1 else ""))
 
@@ -582,7 +582,7 @@ func bind_console(local: Object) -> void:
 func _baseline_cvars() -> void:
 	var local: Object = _console.get_ref() if _console != null else null
 	if local != null:
-		var _seen := DotProfilerContext.cvars(local, _cvars_first)
+		var _seen := GSProfilerContext.cvars(local, _cvars_first)
 
 
 ## Where the look settings are kept between runs (user://); "" disables saving.
@@ -597,7 +597,7 @@ func save_ui_prefs() -> Error:
 	if made != OK:
 		return made
 	var cf := ConfigFile.new()
-	for key in DotProfilerConfig.UI_KEYS:
+	for key in GSProfilerConfig.UI_KEYS:
 		cf.set_value("ui", key, config.text_of(key))
 	return cf.save(ui_prefs_file)
 
@@ -607,14 +607,14 @@ func load_ui_prefs() -> bool:
 	var cf := ConfigFile.new()
 	if ui_prefs_file == "" or cf.load(ui_prefs_file) != OK:
 		return false
-	for key in DotProfilerConfig.UI_KEYS:
+	for key in GSProfilerConfig.UI_KEYS:
 		if cf.has_section_key("ui", key):
 			var _r := config.set_text(key, str(cf.get_value("ui", key)))
 	return true
 
 
 ## The panel the settings menu shows: overlay toggle, record and stop, the saved path and recent recordings.
-## [param kit] is GameSpice Menu's DotMenuKit, used by duck typing; null builds plain controls.
+## [param kit] is GameSpice Menu's GSMenuKit, used by duck typing; null builds plain controls.
 func make_menu_panel(kit: Object = null) -> Control:
 	var panel: Control = load(_PANEL_UID).new()
 	panel.setup(self, kit)
@@ -622,8 +622,8 @@ func make_menu_panel(kit: Object = null) -> Control:
 
 
 func describe() -> String:
-	return "DotProfiler watching=%s recording=%s spikes=%d %s" % [is_watching(), _recording, _spikes_seen,
-		DotProfilerPeriod.describe_found(_all_period.detect())]
+	return "GSProfiler watching=%s recording=%s spikes=%d %s" % [is_watching(), _recording, _spikes_seen,
+		GSProfilerPeriod.describe_found(_all_period.detect())]
 
 
 func describe_lines() -> PackedStringArray:
@@ -633,16 +633,16 @@ func describe_lines() -> PackedStringArray:
 		out.append("  %-28s %.2f ms" % [row.system, row.ms])
 	var ex := extras()
 	for k: String in ex:
-		out.append("  %s: %s" % [k, DotProfilerContext.flat(ex[k])])
+		out.append("  %s: %s" % [k, GSProfilerContext.flat(ex[k])])
 	if not _last_spike.is_empty():
-		out.append("  last spike: " + DotProfilerReport.spike_line(_last_spike))
+		out.append("  last spike: " + GSProfilerReport.spike_line(_last_spike))
 	return out
 
 
-## Attributes one [DotHitchLog] hitch record: the system that took at least [constant CAUSE_SHARE] of it,
+## Attributes one [GSHitchLog] hitch record: the system that took at least [constant CAUSE_SHARE] of it,
 ## else "engine.<phase>", plus hints read from its counter deltas, marks and new nodes.
 static func attribute(rec: Dictionary) -> Dictionary:
-	return DotProfilerReport.attribute(rec, CAUSE_SHARE)
+	return GSProfilerReport.attribute(rec, CAUSE_SHARE)
 
 
 func _set_from_console(text: Variant, key: String) -> Variant:
@@ -652,17 +652,17 @@ func _set_from_console(text: Variant, key: String) -> Variant:
 func _apply() -> void:
 	var want := config.enabled or config.overlay or _recording
 	if want and _hitch == null:
-		_hitch = DotHitchLog.new()
+		_hitch = GSHitchLog.new()
 		_hitch.keep = 64
 		_hitch.frame_measured.connect(_on_frame)
 		_hitch.start(get_tree())
-		DotLog.debug(CHANNEL, "watching frames, budget %.1f ms" % config.budget_ms)
+		GSLog.debug(CHANNEL, "watching frames, budget %.1f ms" % config.budget_ms)
 	elif not want and _hitch != null:
 		_stop_watch()
 	if _hitch != null:
 		_hitch.threshold_ms = config.budget_ms
-	DotFrameCost.enabled = want
-	DotFrameCost.trace = want and _recording and config.trace
+	GSFrameCost.enabled = want
+	GSFrameCost.trace = want and _recording and config.trace
 	for c: Variant in _periods:
 		_periods[c].tolerance = config.period_tolerance
 		_periods[c].min_spikes = config.period_min_spikes
@@ -676,7 +676,7 @@ func _apply() -> void:
 
 
 ## The per-frame stacked costs the overlay graph draws.
-func graph_data() -> DotProfilerGraphData:
+func graph_data() -> GSProfilerGraphData:
 	return _graph_data
 
 
@@ -684,8 +684,8 @@ func _stop_watch() -> void:
 	if _hitch != null:
 		_hitch.stop()
 		_hitch = null
-	DotFrameCost.enabled = false
-	DotFrameCost.trace = false
+	GSFrameCost.enabled = false
+	GSFrameCost.trace = false
 
 
 func _show_overlay(on: bool) -> void:
@@ -763,12 +763,12 @@ func _on_spike(rec: Dictionary) -> void:
 	_spikes_seen += 1
 	_all_period.add(info.t)
 	if not _periods.has(cause):
-		var p := DotProfilerPeriod.new()
+		var p := GSProfilerPeriod.new()
 		p.tolerance = config.period_tolerance
 		p.min_spikes = config.period_min_spikes
 		_periods[cause] = p
 	_periods[cause].add(info.t)
-	info.period = DotProfilerPeriod.describe_found(_periods[cause].detect())
+	info.period = GSProfilerPeriod.describe_found(_periods[cause].detect())
 	_last_spike = info
 	var tally: Dictionary = _by_cause.get(cause, {"spikes": 0, "worst_ms": 0.0})
 	tally.spikes += 1
@@ -786,6 +786,6 @@ func _on_spike(rec: Dictionary) -> void:
 	var skipped: int = _suppressed.get(cause, 0)
 	_last_warn[cause] = now
 	_suppressed[cause] = 0
-	DotLog.warn(CHANNEL, "frame %.1f ms over %.1f ms budget: %s%s" % [info.ms, config.budget_ms,
-		DotProfilerReport.spike_line(info), (" (+%d more since last)" % skipped) if skipped > 0 else ""],
+	GSLog.warn(CHANNEL, "frame %.1f ms over %.1f ms budget: %s%s" % [info.ms, config.budget_ms,
+		GSProfilerReport.spike_line(info), (" (+%d more since last)" % skipped) if skipped > 0 else ""],
 		{"cause": cause, "ms": info.ms, "period": info.period})

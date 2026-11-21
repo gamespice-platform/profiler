@@ -1,9 +1,9 @@
-class_name DotProfilerConfig
-extends DotConfig
+class_name GSProfilerConfig
+extends GSConfig
 
 ## The profiler's settings: exported defaults < JSON file < environment < command line, and the profiler_* cvars.
 ##
-## Everything is off by default; turning [member enabled] on is what makes systems' [DotFrameCost] reports count.
+## Everything is off by default; turning [member enabled] on is what makes systems' [GSFrameCost] reports count.
 
 ## Master switch: watch every frame and log the cause of each one over budget.
 @export var enabled: bool = false
@@ -97,7 +97,7 @@ extends DotConfig
 ## Publish frame time, spikes and memory in the server query's game section (GameSpice Server Query).
 @export var query: bool = false
 
-## While recording, time every span reported through DotFrameCost so the report has a call tree below the systems.
+## While recording, time every span reported through GSFrameCost so the report has a call tree below the systems.
 @export var trace: bool = true
 
 ## While recording, read the engine monitors (physics pairs, islands, draw calls, nodes, memory) every frame.
@@ -178,14 +178,14 @@ extends DotConfig
 ## Suspects the report lists first: the costliest spans by self time against the tick budget. 0 lists none.
 @export var suspects_top: int = 10
 
-## The counter ([method DotProfiler.add_counter]) or SceneTree group costs are divided by, e.g. players; empty is none.
+## The counter ([method GSProfiler.add_counter]) or SceneTree group costs are divided by, e.g. players; empty is none.
 @export var per_unit: String = ""
 
 ## Microseconds one unit of [member per_unit] may cost per physics tick; the suspects are held against it. 0 is no target.
 @export var unit_target_us: float = 0.0
 
 ## Counted every frame while recording: comma-separated `group` or `group:system-prefix` (SceneTree groups, or
-## counters a game adds with [method DotProfiler.add_counter]); the report gives each prefixed system's cost per unit.
+## counters a game adds with [method GSProfiler.add_counter]); the report gives each prefixed system's cost per unit.
 @export var groups: String = ""
 
 ## Count nodes by class when a recording starts and stops, so the report says which kinds grew.
@@ -197,7 +197,7 @@ extends DotConfig
 ## Buckets for the script functions: comma-separated `name=substring|substring` matched against script paths.
 @export var script_buckets: String = ""
 
-## The settings the overlay's look is made of; the menu saves exactly these (see [method DotProfiler.save_ui_prefs]).
+## The settings the overlay's look is made of; the menu saves exactly these (see [method GSProfiler.save_ui_prefs]).
 const UI_KEYS: PackedStringArray = ["overlay_top", "overlay_text", "overlay_text_size", "overlay_scale",
 	"overlay_corner", "overlay_offset_x", "overlay_offset_y", "overlay_opacity", "overlay_bg_opacity", "graph",
 	"graph_height", "graph_scale_ms", "graph_frames", "graph_col_px", "graph_legend", "overlay_merge_net"]
@@ -214,56 +214,56 @@ func cli_prefix() -> String:
 	return "--profiler-"
 
 
-func validate() -> DotResult:
+func validate() -> GSResult:
 	if budget_ms <= 0.0 or budget_ms > 10000.0:
-		return DotResult.fail(DotError.CODE_INVALID, "profiler_budget_ms is %s; it must be above 0 and at most 10000." % budget_ms)
+		return GSResult.fail(GSError.CODE_INVALID, "profiler_budget_ms is %s; it must be above 0 and at most 10000." % budget_ms)
 	if overlay_top < 1 or overlay_top > 32:
-		return DotResult.fail(DotError.CODE_INVALID, "profiler_overlay_top must be 1 to 32.")
+		return GSResult.fail(GSError.CODE_INVALID, "profiler_overlay_top must be 1 to 32.")
 	if graph_height < 20 or graph_height > 400 or graph_frames < 20 or graph_frames > 600 or graph_scale_ms < 0.0 or graph_scale_ms > 10000.0:
-		return DotResult.fail(DotError.CODE_INVALID, "profiler_graph_height is 20 to 400, profiler_graph_frames 20 to 600, profiler_graph_scale_ms 0 to 10000.")
+		return GSResult.fail(GSError.CODE_INVALID, "profiler_graph_height is 20 to 400, profiler_graph_frames 20 to 600, profiler_graph_scale_ms 0 to 10000.")
 	if overlay_text_size < 7 or overlay_text_size > 40 or overlay_scale < 0.5 or overlay_scale > 3.0:
-		return DotResult.fail(DotError.CODE_INVALID, "profiler_overlay_text_size is 7 to 40 and profiler_overlay_scale 0.5 to 3.")
+		return GSResult.fail(GSError.CODE_INVALID, "profiler_overlay_text_size is 7 to 40 and profiler_overlay_scale 0.5 to 3.")
 	if not overlay_corner in CORNERS:
-		return DotResult.fail(DotError.CODE_INVALID, "profiler_overlay_corner is one of %s." % ", ".join(CORNERS))
+		return GSResult.fail(GSError.CODE_INVALID, "profiler_overlay_corner is one of %s." % ", ".join(CORNERS))
 	if overlay_offset_x < 0 or overlay_offset_x > 4000 or overlay_offset_y < 0 or overlay_offset_y > 4000:
-		return DotResult.fail(DotError.CODE_INVALID, "profiler_overlay_offset_x and _y are 0 to 4000.")
+		return GSResult.fail(GSError.CODE_INVALID, "profiler_overlay_offset_x and _y are 0 to 4000.")
 	if overlay_opacity < 0.1 or overlay_opacity > 1.0 or overlay_bg_opacity < 0.0 or overlay_bg_opacity > 1.0:
-		return DotResult.fail(DotError.CODE_INVALID, "profiler_overlay_opacity is 0.1 to 1 and profiler_overlay_bg_opacity 0 to 1.")
+		return GSResult.fail(GSError.CODE_INVALID, "profiler_overlay_opacity is 0.1 to 1 and profiler_overlay_bg_opacity 0 to 1.")
 	if graph_col_px < 1 or graph_col_px > 6:
-		return DotResult.fail(DotError.CODE_INVALID, "profiler_graph_col_px is 1 to 6.")
+		return GSResult.fail(GSError.CODE_INVALID, "profiler_graph_col_px is 1 to 6.")
 	if period_tolerance <= 0.0 or period_tolerance >= 0.5:
-		return DotResult.fail(DotError.CODE_INVALID, "profiler_period_tolerance must be above 0 and below 0.5.")
+		return GSResult.fail(GSError.CODE_INVALID, "profiler_period_tolerance must be above 0 and below 0.5.")
 	if period_min_spikes < 3:
-		return DotResult.fail(DotError.CODE_INVALID, "profiler_period_min_spikes must be 3 or more.")
+		return GSResult.fail(GSError.CODE_INVALID, "profiler_period_min_spikes must be 3 or more.")
 	if record_seconds <= 0.0 or keep_recordings < 1:
-		return DotResult.fail(DotError.CODE_INVALID, "profiler_record_seconds must be above 0 and profiler_keep_recordings 1 or more.")
+		return GSResult.fail(GSError.CODE_INVALID, "profiler_record_seconds must be above 0 and profiler_keep_recordings 1 or more.")
 	if not (record_dir.begins_with("user://") or (record_dir.is_absolute_path() and not record_dir.contains("://"))):
-		return DotResult.fail(DotError.CODE_INVALID, "profiler_record_dir must be under user:// or an absolute path, not '%s'." % record_dir)
+		return GSResult.fail(GSError.CODE_INVALID, "profiler_record_dir must be under user:// or an absolute path, not '%s'." % record_dir)
 	if sample_hz < 0.0:
-		return DotResult.fail(DotError.CODE_INVALID, "profiler_sample_hz must be 0 or more (0 takes no samples).")
+		return GSResult.fail(GSError.CODE_INVALID, "profiler_sample_hz must be 0 or more (0 takes no samples).")
 	if worst_frames < 0:
-		return DotResult.fail(DotError.CODE_INVALID, "profiler_worst_frames must be 0 or more (0 keeps none).")
+		return GSResult.fail(GSError.CODE_INVALID, "profiler_worst_frames must be 0 or more (0 keeps none).")
 	if capture_seconds < 0.0 or is_nan(capture_seconds) or is_inf(capture_seconds):
-		return DotResult.fail(DotError.CODE_INVALID, "profiler_capture_seconds is %s; use 0 for an open-ended capture or a positive number of seconds." % capture_seconds)
+		return GSResult.fail(GSError.CODE_INVALID, "profiler_capture_seconds is %s; use 0 for an open-ended capture or a positive number of seconds." % capture_seconds)
 	if perf_trace_png_width < 0 or perf_trace_max_boxes < 0:
-		return DotResult.fail(DotError.CODE_INVALID, "profiler_perf_trace_png_width and profiler_perf_trace_max_boxes must be 0 or more (0 = default width / unlimited boxes).")
+		return GSResult.fail(GSError.CODE_INVALID, "profiler_perf_trace_png_width and profiler_perf_trace_max_boxes must be 0 or more (0 = default width / unlimited boxes).")
 	if perf_upload_url != "" and not (perf_upload_url.begins_with("http://") or perf_upload_url.begins_with("https://")):
-		return DotResult.fail(DotError.CODE_INVALID, "profiler_perf_upload_url must start with http:// or https://, not '%s'." % perf_upload_url)
+		return GSResult.fail(GSError.CODE_INVALID, "profiler_perf_upload_url must start with http:// or https://, not '%s'." % perf_upload_url)
 	if suspects_top < 0 or unit_target_us < 0.0:
-		return DotResult.fail(DotError.CODE_INVALID, "profiler_suspects_top and profiler_unit_target_us must be 0 or more.")
+		return GSResult.fail(GSError.CODE_INVALID, "profiler_suspects_top and profiler_unit_target_us must be 0 or more.")
 	if perf_top < 0 or perf_load_min_ms < 0.0 or not ["", "client", "server", "standalone"].has(perf_role):
-		return DotResult.fail(DotError.CODE_INVALID, "profiler_perf_top and profiler_perf_load_min_ms must be 0 or more and profiler_perf_role empty, client, server or standalone.")
+		return GSResult.fail(GSError.CODE_INVALID, "profiler_perf_top and profiler_perf_load_min_ms must be 0 or more and profiler_perf_role empty, client, server or standalone.")
 	if script_top < 0:
-		return DotResult.fail(DotError.CODE_INVALID, "profiler_script_top must be 0 or more (0 is off).")
+		return GSResult.fail(GSError.CODE_INVALID, "profiler_script_top must be 0 or more (0 is off).")
 	if perf_baseline_noise_pct < 0.0 or perf_signal_top < 0:
-		return DotResult.fail(DotError.CODE_INVALID, "profiler_perf_baseline_noise_pct and profiler_perf_signal_top must be 0 or more.")
+		return GSResult.fail(GSError.CODE_INVALID, "profiler_perf_baseline_noise_pct and profiler_perf_signal_top must be 0 or more.")
 	for entry in parse_groups(groups):
 		if entry.group == "":
-			return DotResult.fail(DotError.CODE_INVALID, "profiler_groups is 'group' or 'group:prefix', comma-separated; '%s' has an empty name." % groups)
+			return GSResult.fail(GSError.CODE_INVALID, "profiler_groups is 'group' or 'group:prefix', comma-separated; '%s' has an empty name." % groups)
 	for b in parse_buckets(script_buckets):
 		if b.name == "" or (b.match as PackedStringArray).is_empty():
-			return DotResult.fail(DotError.CODE_INVALID, "profiler_script_buckets is 'name=part|part', comma-separated, not '%s'." % script_buckets)
-	return DotResult.success(self)
+			return GSResult.fail(GSError.CODE_INVALID, "profiler_script_buckets is 'name=part|part', comma-separated, not '%s'." % script_buckets)
+	return GSResult.success(self)
 
 
 ## [param text] as [{group, prefix}]; a missing prefix is "".
@@ -323,23 +323,23 @@ func text_of(key: String) -> String:
 
 
 ## Sets [param key] from console text and emits [signal Resource.changed]; a value that fails [method validate] is put back.
-func set_text(key: String, text: String) -> DotResult:
+func set_text(key: String, text: String) -> GSResult:
 	if not has_key(key):
-		return DotResult.fail(DotError.CODE_INVALID, "No profiler setting '%s'." % key)
+		return GSResult.fail(GSError.CODE_INVALID, "No profiler setting '%s'." % key)
 	var old: Variant = get(key)
 	var t := text.strip_edges()
 	match typeof(old):
 		TYPE_BOOL:
 			if not t.to_lower() in ["1", "0", "true", "false", "on", "off"]:
-				return DotResult.fail(DotError.CODE_INVALID, "%s is 0 or 1." % cvar_name(key))
+				return GSResult.fail(GSError.CODE_INVALID, "%s is 0 or 1." % cvar_name(key))
 			set(key, t.to_lower() in ["1", "true", "on"])
 		TYPE_INT:
 			if not t.is_valid_int():
-				return DotResult.fail(DotError.CODE_INVALID, "%s is a whole number." % cvar_name(key))
+				return GSResult.fail(GSError.CODE_INVALID, "%s is a whole number." % cvar_name(key))
 			set(key, t.to_int())
 		TYPE_FLOAT:
 			if not t.is_valid_float():
-				return DotResult.fail(DotError.CODE_INVALID, "%s is a number." % cvar_name(key))
+				return GSResult.fail(GSError.CODE_INVALID, "%s is a number." % cvar_name(key))
 			set(key, t.to_float())
 		_:
 			set(key, t)
@@ -348,10 +348,10 @@ func set_text(key: String, text: String) -> DotResult:
 		set(key, old)
 		return res
 	emit_changed()
-	return DotResult.success(get(key))
+	return GSResult.success(get(key))
 
 
 func _on_cvar(_old: String, new_value: String, key: String) -> void:
 	var res := set_text(key, new_value)
 	if not res.ok:
-		DotLog.warn("dot.profiler", res.error.message)
+		GSLog.warn("dot.profiler", res.error.message)

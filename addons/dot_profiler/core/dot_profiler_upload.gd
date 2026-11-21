@@ -1,9 +1,9 @@
-class_name DotProfilerUpload
+class_name GSProfilerUpload
 extends RefCounted
 
 ## Posts a finished perf report (v1 / v1.1) and its folded stacks to Nightly's `/api/perf/ingest` (docs/perf-report.md,
-## "Uploading"). Off unless [member DotProfilerConfig.perf_upload_url] is set. The Bearer token comes from the environment
-## variable [constant TOKEN_ENV] or the first line of [member DotProfilerConfig.perf_upload_token_file]; it has no cvar and
+## "Uploading"). Off unless [member GSProfilerConfig.perf_upload_url] is set. The Bearer token comes from the environment
+## variable [constant TOKEN_ENV] or the first line of [member GSProfilerConfig.perf_upload_token_file]; it has no cvar and
 ## no command-line form (argv shows in process lists), and it is only ever put in the request header, never logged or
 ## returned in a message. Uses HTTPRequest, so it works in a web export (the panel must allow the page's origin).
 
@@ -76,17 +76,17 @@ static func send(parent: Node, req: Dictionary, done: Callable) -> bool:
 
 ## Reads the saved perf report at [param path] back and POSTs it with [param folded] to config.perf_upload_url
 ## (docs/perf-report.md "Uploading"). A missing token is warned about, never printed. [param done] gets (ok, status, message).
-static func upload_report(parent: Node, config: DotProfilerConfig, path: String, folded: String, channel: StringName, done: Callable) -> void:
+static func upload_report(parent: Node, config: GSProfilerConfig, path: String, folded: String, channel: StringName, done: Callable) -> void:
 	var perf: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
 	if not perf is Dictionary:
-		DotLog.warn(channel, "perf upload skipped: cannot read %s back" % path)
+		GSLog.warn(channel, "perf upload skipped: cannot read %s back" % path)
 		return
 	var tok := token(config.perf_upload_token_file)
 	if tok == "":
-		DotLog.warn(channel, "perf upload sent without a token: set %s or profiler_perf_upload_token_file" % TOKEN_ENV)
+		GSLog.warn(channel, "perf upload sent without a token: set %s or profiler_perf_upload_token_file" % TOKEN_ENV)
 	send(parent, request(config.perf_upload_url, perf, folded, tok), func(ok: bool, status: int, message: String) -> void:
 		if ok:
-			DotLog.info(channel, "perf report uploaded (HTTP %d)" % status)
+			GSLog.info(channel, "perf report uploaded (HTTP %d)" % status)
 		else:
-			DotLog.warn(channel, "perf upload failed: %s" % message)
+			GSLog.warn(channel, "perf upload failed: %s" % message)
 		done.call(ok, status, message))

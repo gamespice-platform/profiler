@@ -1,10 +1,10 @@
-class_name DotProfilerPerfReport
+class_name GSProfilerPerfReport
 extends RefCounted
 
 ## The stable machine-readable report, version 1.1 (docs/perf-report.md, schema docs/perf-report.schema.json): one
 ## recording's frame percentiles, budget rows with addon attribution, hitches with their responsible systems, render,
 ## memory, network per class, physics, script split and loads. [method build] converts the profiler's own report
-## (DotProfilerReport) plus what [param opts] adds; [method write] saves [code]perf-<stamp>.json[/code];
+## (GSProfilerReport) plus what [param opts] adds; [method write] saves [code]perf-<stamp>.json[/code];
 ## [method problems] checks a report against the required keys.
 
 const SCHEMA := "gamespice.perf-report"
@@ -15,7 +15,7 @@ const MINOR := 1
 const TRIS_PER_DRAW := 1000
 
 
-## The perf report for [param r] (a DotProfilerReport). [param opts]: game_id, role, platform, top (0 = all rows),
+## The perf report for [param r] (a GSProfilerReport). [param opts]: game_id, role, platform, top (0 = all rows),
 ## map, bots, players, tags, network (rows), signals (rows), render_top (rows), render_estimate (bool), loading (rows), wasm_heap_mb, baseline (dict).
 static func build(r: Dictionary, opts: Dictionary) -> Dictionary:
 	var ctx: Dictionary = r.get("context", {})
@@ -47,10 +47,10 @@ static func build(r: Dictionary, opts: Dictionary) -> Dictionary:
 		if fs.has(ph):
 			phases[ph] = fs[ph]
 	out.frame["phases"] = phases
-	var rows := DotProfilerBudget.rows(r.get("tree", []), frame_ms, budget_ms, top)
+	var rows := GSProfilerBudget.rows(r.get("tree", []), frame_ms, budget_ms, top)
 	if not rows.is_empty():
 		out["budget"] = rows
-		out["addons"] = DotProfilerBudget.addons(DotProfilerBudget.rows(r.get("tree", []), frame_ms, budget_ms, 0), frame_ms, top)
+		out["addons"] = GSProfilerBudget.addons(GSProfilerBudget.rows(r.get("tree", []), frame_ms, budget_ms, 0), frame_ms, top)
 	var pt: Dictionary = r.get("physics_ticks", {})
 	if not pt.is_empty():
 		out["tick"] = {"rate": float(pt.get("ticks_per_sec", 0.0)), "ticks": int(pt.get("ticks", 0)), "dropped": int(pt.get("dropped_ticks", 0)),
@@ -121,8 +121,8 @@ static func _render(mon: Dictionary, opts: Dictionary) -> Dictionary:
 	var gpu: Dictionary = opts.get("gpu_time", {})
 	if not gpu.is_empty():
 		out["gpu"] = gpu
-		if out.has("top_draw") and gpu.get("source", "") == DotProfilerGpuTime.SOURCE_MEASURED:
-			DotProfilerGpuTime.apportion(out.top_draw, float((mon.get("render_gpu_ms", {}) as Dictionary).get("avg", 0.0)))
+		if out.has("top_draw") and gpu.get("source", "") == GSProfilerGpuTime.SOURCE_MEASURED:
+			GSProfilerGpuTime.apportion(out.top_draw, float((mon.get("render_gpu_ms", {}) as Dictionary).get("avg", 0.0)))
 	return out
 
 
@@ -247,22 +247,22 @@ static func problems(p: Dictionary) -> Array[String]:
 
 
 ## Writes [param p] as [code]perf-<stamp>.json[/code] under [param dir] (made if missing); the value is the path.
-static func write(p: Dictionary, dir: String) -> DotResult:
+static func write(p: Dictionary, dir: String) -> GSResult:
 	var err := DirAccess.make_dir_recursive_absolute(dir)
 	if err != OK and not DirAccess.dir_exists_absolute(dir):
-		return DotResult.fail(DotError.CODE_IO, "Cannot create %s." % dir)
+		return GSResult.fail(GSError.CODE_IO, "Cannot create %s." % dir)
 	var path := dir.path_join("perf-%s-%d.json" % [Time.get_datetime_string_from_system(true).replace("-", "").replace(":", "").replace("T", ""), Time.get_ticks_msec() % 1000])
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f == null:
-		return DotResult.fail(DotError.CODE_IO, "Cannot write %s." % path)
+		return GSResult.fail(GSError.CODE_IO, "Cannot write %s." % path)
 	f.store_string(JSON.stringify(p, "\t", true))
 	f.close()
-	return DotResult.success(path)
+	return GSResult.success(path)
 
 
 ## Builds, checks and writes the perf report (docs/perf-report.md) for [param report] beside the recording and returns
 ## its path, or "" on failure (logged, not fatal). [param extra] is the game's options (map, bots, players, tags).
-static func save(tree: SceneTree, config: DotProfilerConfig, report: Dictionary, net_rows: Array, load_rows: Array,
+static func save(tree: SceneTree, config: GSProfilerConfig, report: Dictionary, net_rows: Array, load_rows: Array,
 		extra: Dictionary, channel: StringName, signal_rows: Array = [], folded: String = "") -> String:
 	var opts := {"game_id": config.perf_game_id if config.perf_game_id != "" else String(ProjectSettings.get_setting("application/config/name", "")),
 		"platform": "web" if OS.has_feature("web") else "native", "top": config.perf_top, "loading": load_rows,
@@ -281,24 +281,24 @@ static func save(tree: SceneTree, config: DotProfilerConfig, report: Dictionary,
 		opts[k] = extra[k]
 	var perf := build(report, opts)
 	if config.perf_baseline != "":
-		var ref := DotProfilerPerfBaseline.load_report(config.perf_baseline)
+		var ref := GSProfilerPerfBaseline.load_report(config.perf_baseline)
 		if ref.ok:
-			perf["baseline"] = DotProfilerPerfBaseline.diff(perf, ref.value, config.perf_baseline_noise_pct, config.perf_baseline)
+			perf["baseline"] = GSProfilerPerfBaseline.diff(perf, ref.value, config.perf_baseline_noise_pct, config.perf_baseline)
 		else:
-			DotLog.warn(channel, "perf baseline skipped: %s" % ref.error.message)
+			GSLog.warn(channel, "perf baseline skipped: %s" % ref.error.message)
 	var bad := problems(perf)
 	if not bad.is_empty():
-		DotLog.warn(channel, "perf report is invalid: %s" % ", ".join(bad))
+		GSLog.warn(channel, "perf report is invalid: %s" % ", ".join(bad))
 	var res := write(perf, config.record_dir)
 	if not res.ok:
-		DotLog.warn(channel, "perf report not saved: %s" % res.error.message)
+		GSLog.warn(channel, "perf report not saved: %s" % res.error.message)
 		return ""
-	DotLog.info(channel, "perf report saved to %s" % ProjectSettings.globalize_path(res.value))
+	GSLog.info(channel, "perf report saved to %s" % ProjectSettings.globalize_path(res.value))
 	if config.perf_trace and folded != "":
-		var art := DotProfilerTraceArt.write(folded, String(res.value).trim_suffix(".json"),
+		var art := GSProfilerTraceArt.write(folded, String(res.value).trim_suffix(".json"),
 			"%s call trace" % String(opts.game_id), config.perf_trace_png_width, config.perf_trace_max_boxes)
 		if not art.ok:
-			DotLog.warn(channel, "call trace not saved: %s" % art.error.message)
+			GSLog.warn(channel, "call trace not saved: %s" % art.error.message)
 		elif art.value != "":
-			DotLog.info(channel, "call trace saved to %s" % ProjectSettings.globalize_path(art.value))
+			GSLog.info(channel, "call trace saved to %s" % ProjectSettings.globalize_path(art.value))
 	return res.value

@@ -1,8 +1,8 @@
 extends RefCounted
 
-## GameSpice Profiler's API level. The rule for bumping it is on [DotAddonApi].
+## GameSpice Profiler's API level. The rule for bumping it is on [GSAddonApi].
 
-# 1: DotProfiler, DotProfilerConfig, DotProfilerPeriod, DotProfilerReport, DotProfilerOverlay, DotProfilerPanel.
-# 2: DotProfilerTree, DotProfilerSession, DotProfilerTicks, DotProfilerCompare, DotProfilerDeep, DotProfilerReportText, report v2, capture key, profiler_capture/compare.
+# 1: GSProfiler, GSProfilerConfig, GSProfilerPeriod, GSProfilerReport, GSProfilerOverlay, GSProfilerPanel.
+# 2: GSProfilerTree, GSProfilerSession, GSProfilerTicks, GSProfilerCompare, GSProfilerDeep, GSProfilerReportText, report v2, capture key, profiler_capture/compare.
 const LEVEL := 2
 const OLDEST := 1

@@ -1,4 +1,4 @@
-class_name DotProfilerWindow
+class_name GSProfilerWindow
 extends CanvasLayer
 
 ## The profiler's options as a window over the running game (Shift+F10 or profiler_menu): the same panel as the
@@ -12,8 +12,8 @@ const WIDTH := 460.0
 const MARGIN := 20.0
 
 ## The profiler shown; set before adding.
-var profiler: DotProfiler = null
-var panel: DotProfilerPanel = null
+var profiler: GSProfiler = null
+var panel: GSProfilerPanel = null
 var close_button: Button = null
 
 var _open := false
@@ -57,7 +57,7 @@ func _ready() -> void:
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	box.add_child(scroll)
-	panel = profiler.make_menu_panel(null) as DotProfilerPanel
+	panel = profiler.make_menu_panel(null) as GSProfilerPanel
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(panel)
 	_mouse_before = Input.mouse_mode
@@ -67,20 +67,20 @@ func _ready() -> void:
 
 
 ## The window open on [param profiler], or null.
-static func of(profiler: Node) -> DotProfilerWindow:
+static func of(profiler: Node) -> GSProfilerWindow:
 	for ch in profiler.get_children():
-		if ch is DotProfilerWindow and (ch as DotProfilerWindow).is_pointer_mode():
-			return ch as DotProfilerWindow
+		if ch is GSProfilerWindow and (ch as GSProfilerWindow).is_pointer_mode():
+			return ch as GSProfilerWindow
 	return null
 
 
 ## Opens a window on [param profiler], or closes the open one. True when one is now open.
-static func toggle(profiler: DotProfiler) -> bool:
+static func toggle(profiler: GSProfiler) -> bool:
 	var open := of(profiler)
 	if open != null:
 		open.close_menu()
 		return false
-	var w := DotProfilerWindow.new()
+	var w := GSProfilerWindow.new()
 	w.profiler = profiler
 	profiler.add_child(w)
 	return true

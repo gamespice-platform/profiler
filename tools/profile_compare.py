@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Compare two dot-profiler reports (JSON, version 1 or 2): B minus A in ms per frame.
 
-Same sections and order as DotProfilerCompare in the addon: frame, phase, system, tree, query, then group
+Same sections and order as GSProfilerCompare in the addon: frame, phase, system, tree, query, then group
 (count, us per unit), script (self ms) and monitor (average, its own unit) when the reports have them.
 --diff A is the saved baseline: only rows that moved by at least --noise-pct percent of A are printed.
 """

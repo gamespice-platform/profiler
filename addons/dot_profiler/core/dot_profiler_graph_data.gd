@@ -1,4 +1,4 @@
-class_name DotProfilerGraphData
+class_name GSProfilerGraphData
 extends RefCounted
 
 ## A ring of per-frame stacked costs for the graph: one value per band per frame, in ms, bottom band first.

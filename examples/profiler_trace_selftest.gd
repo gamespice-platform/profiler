@@ -16,21 +16,21 @@ class Caster:
 	extends Node3D
 
 	func _physics_process(_delta: float) -> void:
-		var t := DotFrameCost.now()
+		var t := GSFrameCost.now()
 		var q := PhysicsRayQueryParameters3D.create(Vector3(0, 0, 0), Vector3(0, 0, -10))
 		for i in 3:
-			var _hit := DotSpaceQuery.ray(get_world_3d().direct_space_state, q, &"selftest.caster")
-			DotProfilerCounts.add(&"selftest.cast")
-		DotFrameCost.add(&"selftest.caster", t, "3 rays")
+			var _hit := GSSpaceQuery.ray(get_world_3d().direct_space_state, q, &"selftest.caster")
+			GSProfilerCounts.add(&"selftest.cast")
+		GSFrameCost.add(&"selftest.caster", t, "3 rays")
 
 
 func _ready() -> void:
-	var _r := DotPaths.remove_tree(DIR)
+	var _r := GSPaths.remove_tree(DIR)
 	_tree()
 	_suspects()
 	await _live()
 	_compare()
-	var _c := DotPaths.remove_tree(DIR)
+	var _c := GSPaths.remove_tree(DIR)
 	print("profiler_trace_selftest: %d of %d sections, %d checks (want %d), %d failed" % [_sections, SECTIONS, _checks, CHECKS, _failed])
 	var ok := _failed == 0 and _sections == SECTIONS and _checks == CHECKS
 	get_tree().quit(0 if ok else 1)
@@ -51,7 +51,7 @@ func _row(rows: Array, path: String) -> Dictionary:
 
 
 func _tree() -> void:
-	var t := DotProfilerTree.new()
+	var t := GSProfilerTree.new()
 	# process 1000-3000, render 3000-4000, wait to the first tick at 5000; ticks 5000 and 7500, scripts end 7000 and 9000.
 	var events := PackedInt64Array([1500, 2000, 0, 5200, 5300, 1, 5400, 5450, 2, 5100, 5600, 0])
 	var rec := {"usec": PackedInt64Array([1000, 5000, 3000, 4000, 10000]),
@@ -89,7 +89,7 @@ func _suspects() -> void:
 		{"path": "frame;wait", "name": "wait", "ms": 3.0, "self_ms": 3.0, "calls": 1.0}]
 	var report := {"tree": tree, "budget_ms": 20.0, "physics_ticks": {"per_frame": 2.0, "per_second": 50.0},
 		"unit": {"name": "players", "count": {"avg": 4.0}}}
-	DotProfilerSuspects.attach(report, 2, 100.0)
+	GSProfilerSuspects.attach(report, 2, 100.0)
 	var fns: Array = report.functions
 	var brain: Dictionary = fns[0]
 	_check(brain.name == "brain" and is_equal_approx(brain.self_ms, 1.5) and is_equal_approx(brain.total_ms, 2.0) and is_equal_approx(brain.calls, 4.0),
@@ -104,7 +104,7 @@ func _suspects() -> void:
 	_check(sus.size() == 2 and sus[0].name == "brain" and is_equal_approx(sus[0].pct_budget, 7.5) and is_equal_approx(sus[0].pct_target, 375.0),
 		"the top suspects with their share of the 20 ms tick and of the 100 us target")
 	_check(is_equal_approx(report.budget.sim_ms_per_tick, 3.0) and is_equal_approx(report.budget.sim_us_per_unit, 750.0), "all physics scripts per tick and per unit")
-	_check("\n".join(DotProfilerSuspects.lines(report)).contains("target 100 us per player per tick"), "the table names the target")
+	_check("\n".join(GSProfilerSuspects.lines(report)).contains("target 100 us per player per tick"), "the table names the target")
 
 
 func _live() -> void:
@@ -116,9 +116,9 @@ func _live() -> void:
 	add_child(floor_body)
 	var caster := Caster.new()
 	add_child(caster)
-	var prof := DotProfiler.new()
+	var prof := GSProfiler.new()
 	prof.register_as_service = false
-	prof.config = DotProfilerConfig.new()
+	prof.config = GSProfilerConfig.new()
 	prof.config.record_dir = DIR
 	prof.config.capture_seconds = 0.6
 	prof.config.sample_hz = 0.0
@@ -127,17 +127,17 @@ func _live() -> void:
 	add_child(prof)
 	prof.add_counter(&"casters", func() -> int: return 2)
 	prof.enable_capture_key()
-	_check(InputMap.has_action(DotProfiler.CAPTURE_ACTION) and prof.is_processing_input(), "the capture key is bound")
+	_check(InputMap.has_action(GSProfiler.CAPTURE_ACTION) and prof.is_processing_input(), "the capture key is bound")
 	var press := InputEventAction.new()
-	press.action = DotProfiler.CAPTURE_ACTION
+	press.action = GSProfiler.CAPTURE_ACTION
 	press.pressed = true
 	Input.parse_input_event(press)
 	await get_tree().process_frame
 	await get_tree().process_frame
-	_check(prof.is_recording() and DotFrameCost.trace, "the key starts a capture with tracing on")
-	var res: DotResult = await prof.recording_finished
-	_check(res.ok and not prof.is_recording() and not DotFrameCost.trace, "the capture stops itself and turns tracing off")
-	var r: Dictionary = DotPaths.read_json(res.value).value
+	_check(prof.is_recording() and GSFrameCost.trace, "the key starts a capture with tracing on")
+	var res: GSResult = await prof.recording_finished
+	_check(res.ok and not prof.is_recording() and not GSFrameCost.trace, "the capture stops itself and turns tracing off")
+	var r: Dictionary = GSPaths.read_json(res.value).value
 	_check(int(r.version) == 2 and (r.frame_stats as Dictionary).has("frame"), "a version 2 report with frame statistics")
 	var path := "frame;physics;scripts;selftest.caster;q.intersect_ray"
 	_check(not _row(r.tree, path).is_empty(), "queries nest under the system that ran them, under the physics scripts")
@@ -159,7 +159,7 @@ func _live() -> void:
 	_check(not sus.is_empty() and sus.size() <= 10 and float(sus[0].self_ms_per_frame) >= float(sus[-1].self_ms_per_frame) and sus[0].has("pct_budget") and sus[0].has("pct_target"),
 		"the suspects are ranked by self time, against the budget and the target")
 	_check(is_equal_approx(r.engine.queries_per_tick, 3.0) and float(r.engine.query_us_per_call) > 0.0, "engine work counts the queries per tick")
-	_check(is_equal_approx(r.engine.counts["selftest.cast"].per_tick, 3.0) and not DotProfilerCounts.enabled, "a count the game reports is per tick, and counting stops with the recording")
+	_check(is_equal_approx(r.engine.counts["selftest.cast"].per_tick, 3.0) and not GSProfilerCounts.enabled, "a count the game reports is per tick, and counting stops with the recording")
 	_check((r.engine as Dictionary).has("nodes_added_per_tick") and (r.engine as Dictionary).has("objects_grown_per_tick"), "engine work carries node and object growth")
 	_check((r.monitors as Dictionary).has("render_cpu_ms") and (r.monitors as Dictionary).has("render_gpu_ms"), "render cpu and gpu ms are recorded by default")
 	_check(text.find("suspects") >= 0 and text.find("suspects") < text.find("Systems (reported") and text.contains("Engine work per tick") and text.contains("Functions (traced") and text.contains("drawn per frame"),
@@ -183,11 +183,11 @@ func _compare() -> void:
 	var b := {"frames": 10, "p50_ms": 12.0, "phases": {"physics": 80.0},
 		"systems": [{"system": "bots", "ms": 50.0, "ms_per_frame": 5.0}, {"system": "new", "ms": 10.0, "ms_per_frame": 1.0}],
 		"tree": [{"path": "frame", "ms": 12.0}]}
-	var rows := DotProfilerCompare.compare(a, b)
+	var rows := GSProfilerCompare.compare(a, b)
 	var sys := rows.filter(func(x: Dictionary) -> bool: return x.section == "system")
 	_check(sys.size() == 2 and sys[0].name == "bots" and is_equal_approx(sys[0].delta, 3.0), "systems sorted by the size of the change")
 	_check(sys[1].name == "new" and is_equal_approx(sys[1].a, 0.0), "a system only in B compares against 0")
 	var ph := rows.filter(func(x: Dictionary) -> bool: return x.section == "phase" and x.name == "physics")
 	_check(is_equal_approx(ph[0].delta, 3.0), "phases compare per frame")
-	_check("\n".join(DotProfilerCompare.to_text(rows)).contains("+3.00"), "the text shows the signed delta")
+	_check("\n".join(GSProfilerCompare.to_text(rows)).contains("+3.00"), "the text shows the signed delta")
 	_sections += 1

@@ -1,11 +1,11 @@
-class_name DotProfilerCatalogView
+class_name GSProfilerCatalogView
 extends CanvasLayer
 
 ## A full-window list of everything the profiler records: each setting, whether it is on, what it adds to the report and what
-## it costs. Built from [DotProfilerCatalog]; closes with its button or Escape.
+## it costs. Built from [GSProfilerCatalog]; closes with its button or Escape.
 
 ## The profiler whose settings are listed; set before adding.
-var profiler: DotProfiler = null
+var profiler: GSProfiler = null
 var text_label: RichTextLabel = null
 var close_button: Button = null
 
@@ -46,8 +46,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 
 
 ## The whole list as text for [param config].
-static func text(config: DotProfilerConfig) -> String:
-	var out := PackedStringArray(DotProfilerCatalog.lines(config))
+static func text(config: GSProfilerConfig) -> String:
+	var out := PackedStringArray(GSProfilerCatalog.lines(config))
 	out.append("")
 	out.append("Report: every switched-off report section is left out of the saved JSON and text.")
 	return "\n".join(out)

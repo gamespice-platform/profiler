@@ -5,16 +5,16 @@ extends Control
 
 const DIR := "user://profiler_demo"
 
-var _prof: DotProfiler = null
+var _prof: GSProfiler = null
 var _next := 0.0
 
 
 func _ready() -> void:
-	var kit := DotMenuKit.new()
+	var kit := GSMenuKit.new()
 	theme = kit.theme()
 	add_child(kit.backdrop())
-	_prof = DotProfiler.new()
-	_prof.config = DotProfilerConfig.new()
+	_prof = GSProfiler.new()
+	_prof.config = GSProfilerConfig.new()
 	_prof.config.budget_ms = 25.0
 	_prof.config.record_dir = DIR
 	_prof.config.overlay = true
@@ -36,21 +36,21 @@ func _process(_delta: float) -> void:
 	if not _prof.is_recording() or now < _next:
 		return
 	_next = now + 0.5
-	var t := DotFrameCost.now()
+	var t := GSFrameCost.now()
 	OS.delay_msec(35)
-	DotFrameCost.add(&"demo.minimap", t, "redraw")
+	GSFrameCost.add(&"demo.minimap", t, "redraw")
 
 
-func _on_finished(_res: DotResult) -> void:
+func _on_finished(_res: GSResult) -> void:
 	var args := OS.get_cmdline_user_args()
 	var i := args.find("--shot")
 	if i < 0 or i + 1 >= args.size():
 		return
 	for f in 30:
 		await get_tree().process_frame
-	_prof.get_children().filter(func(n: Node) -> bool: return n is DotProfilerOverlay).map(func(o: Node) -> Variant: return o.call(&"refresh"))
+	_prof.get_children().filter(func(n: Node) -> bool: return n is GSProfilerOverlay).map(func(o: Node) -> Variant: return o.call(&"refresh"))
 	await RenderingServer.frame_post_draw
 	var err := get_viewport().get_texture().get_image().save_png(args[i + 1])
 	print("profiler_demo: shot %s (%s) %s" % [args[i + 1], error_string(err), _prof.describe()])
-	var _c := DotPaths.remove_tree(DIR)
+	var _c := GSPaths.remove_tree(DIR)
 	get_tree().quit(0 if err == OK else 1)

@@ -1,10 +1,10 @@
-class_name DotProfilerContext
+class_name GSProfilerContext
 extends RefCounted
 
 ## What a report needs to be comparable between machines: OS, CPU, GPU and driver, engine build, tick rate, window
 ## and vsync. [method machine] is read once when a recording starts; a game adds its own keys with
-## [method DotProfiler.add_context] (map, bots, natives loaded). [method build] and [method cvars] say which code
-## ran and with which settings; [DotProfiler] adds both to every report.
+## [method GSProfiler.add_context] (map, bots, natives loaded). [method build] and [method cvars] say which code
+## ran and with which settings; [GSProfiler] adds both to every report.
 
 ## Written beside project.godot where there is no checkout (an export, a served pack): {commit, branch, addons}.
 const STAMP := "build_id.json"

@@ -2,7 +2,7 @@
 # build_stamp.sh [PROJECT_DIR] -- writes PROJECT_DIR/build_id.json ({commit, branch, addons}) from the checkout.
 #
 # A checkout needs none: the profiler reads .git itself. Run this before a pack or an export leaves the
-# checkout, so a report from that build still names its commit (DotProfilerContext.build, source "stamp").
+# checkout, so a report from that build still names its commit (GSProfilerContext.build, source "stamp").
 set -euo pipefail
 dir="${1:-.}"
 cd "$dir"

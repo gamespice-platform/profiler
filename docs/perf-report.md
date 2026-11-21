@@ -13,7 +13,7 @@ Perf report v1.1 (`schema_version` 1, `schema_minor` 1; additive, every 1.0 repo
 | `render` | draw calls, objects, primitives stats; texture and buffer MB; `top_draw` (materials and meshes by estimated draws and triangles) when `profiler_perf_render_scan` is on; with `profiler_perf_render_estimate` (default on) rows carry `est_cost` and `cost_estimate` says it is an estimate |
 | `memory` | static, video, wasm heap (web), objects, nodes, orphans as start/end; growth per minute; node classes with growth; allocation counters |
 | `network.by_class[]` | bytes, messages, bytes/s and the largest message per class and direction |
-| `signals.fanout[]` | per signal: emits, receivers (max, average), deliveries (emits x receivers) and deliveries per second, from `DotProfilerSignals`; cut to `profiler_perf_signal_top` |
+| `signals.fanout[]` | per signal: emits, receivers (max, average), deliveries (emits x receivers) and deliveries per second, from `GSProfilerSignals`; cut to `profiler_perf_signal_top` |
 | `baseline` | what moved against the report named by `profiler_perf_baseline`: rows beyond `profiler_perf_baseline_noise_pct`, each `worse` or `better`, with the reference's commit and time and the counts |
 | `physics`, `tick`, `script`, `counters`, `loading[]`, `overhead_ms_per_frame`, `notes` | see the schema |
 
@@ -21,16 +21,16 @@ Lists are cut to `profiler_perf_top` rows (default 25; `0` keeps every row). Not
 
 ## Naming budget groups
 
-A budget `id` is the name a game gave `DotFrameCost.add` (`fc.bots`, `fc.net_recv`); the engine's phases are `engine.process`, `engine.physics`, `engine.render`, `engine.wait`, and the whole frame is `frame`. Name systems `<owner>.<what>`: the first dotted segment is the addon or game that owns it. `DotProfilerBudget.register_owner("fc.net", "dot-net")` says a longer prefix belongs elsewhere (longest prefix wins). `path` is the tree path (`frame;engine.process;fc.bots`), because one id can appear under two parents.
+A budget `id` is the name a game gave `GSFrameCost.add` (`fc.bots`, `fc.net_recv`); the engine's phases are `engine.process`, `engine.physics`, `engine.render`, `engine.wait`, and the whole frame is `frame`. Name systems `<owner>.<what>`: the first dotted segment is the addon or game that owns it. `GSProfilerBudget.register_owner("fc.net", "dot-net")` says a longer prefix belongs elsewhere (longest prefix wins). `path` is the tree path (`frame;engine.process;fc.bots`), because one id can appear under two parents.
 
 ## How a new game plugs in
 
 1. Nothing for the basics: every recording the profiler writes also writes a perf report. Set `profiler_perf_game_id` (cvar, `DOT_PROFILER_PERF_GAME_ID`, `--profiler-perf-game-id`) or the project name is used. Role is `server` on a headless run, else `client`; `profiler_perf_role` overrides.
-2. Name systems `<owner>.<what>` when calling `DotFrameCost.add`.
+2. Name systems `<owner>.<what>` when calling `GSFrameCost.add`.
 3. Say what the run was: `profiler.set_perf_option("map", "dust")`, `"bots"`, `"players"`, `"tags"` (a dictionary of anything else).
-4. Network cost: where a message is sent or read, `DotProfilerNetCost.add(&"snapshot", DotProfilerNetCost.OUT, bytes)` (and `IN`). One bool test when no recording runs.
-5. Loads: `var t := DotProfilerLoads.now()` before and `DotProfilerLoads.add("res://maps/dust.tscn", &"map", t)` after.
-6. Signal fan-out: `DotProfilerSignals.emitted(self, &"health_changed")` next to the emit (reads the connection count; or `note(&"name", receivers)`). Allocation counters: `DotProfilerCounts.add(&"emit.hit")`; they show under `memory.top_allocs` and `counters`.
+4. Network cost: where a message is sent or read, `GSProfilerNetCost.add(&"snapshot", GSProfilerNetCost.OUT, bytes)` (and `IN`). One bool test when no recording runs.
+5. Loads: `var t := GSProfilerLoads.now()` before and `GSProfilerLoads.add("res://maps/dust.tscn", &"map", t)` after.
+6. Signal fan-out: `GSProfilerSignals.emitted(self, &"health_changed")` next to the emit (reads the connection count; or `note(&"name", receivers)`). Allocation counters: `GSProfilerCounts.add(&"emit.hit")`; they show under `memory.top_allocs` and `counters`.
 7. Optional: `profiler_perf_render_scan` for the draw table (one scene walk at the end of a recording; not for a 60 FPS gate run).
 
 ## Baseline
@@ -58,4 +58,4 @@ Set `profiler_perf_upload_url` (cvar, `DOT_PROFILER_PERF_UPLOAD_URL`, `--profile
 ## Known gaps
 
 - Real per-material GPU time: the engine has no such timer, so `est_gpu_ms` (and `est_cost`, draws plus triangles over 1000, where no GPU time was measured) is an estimate, labelled as one. Measured passes are not available on web or Compatibility.
-- Per-class network cost from `dot-net` is reported through `DotNetCostProbe` (found by name, no dependency). Message types dot-net does not send through its manager (a game's own transport) still need the step 4 call.
+- Per-class network cost from `dot-net` is reported through `GSNetCostProbe` (found by name, no dependency). Message types dot-net does not send through its manager (a game's own transport) still need the step 4 call.

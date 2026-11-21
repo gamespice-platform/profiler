@@ -12,7 +12,7 @@ var _seconds := 20.0
 var _budget := 33.0
 var _out := "user://profiles"
 var _quit := true
-var _prof: DotProfiler = null
+var _prof: GSProfiler = null
 var _load_s := 0.0
 ## What the run was, for the perf report (docs/perf-report.md): game id, map, bots, role override (empty = by display server).
 var _game := ""
@@ -43,8 +43,8 @@ func _ready() -> void:
 
 
 func _run() -> void:
-	_prof = DotProfiler.new()
-	_prof.config = DotProfilerConfig.new()
+	_prof = GSProfiler.new()
+	_prof.config = GSProfilerConfig.new()
 	_prof.config.budget_ms = _budget
 	_prof.config.record_dir = _out
 	_prof.config.keep_recordings = 200
@@ -68,25 +68,25 @@ func _run() -> void:
 	get_tree().root.add_child(inst)
 	get_tree().current_scene = inst
 	_load_s = (Time.get_ticks_usec() - t0) / 1.0e6
-	DotLog.info(CHANNEL, "runner: %s loaded in %.2f s, warming up %.0f s" % [_scene, _load_s, _warmup])
+	GSLog.info(CHANNEL, "runner: %s loaded in %.2f s, warming up %.0f s" % [_scene, _load_s, _warmup])
 	await get_tree().create_timer(_warmup, true, false, true).timeout
 	var started := _prof.start_recording(_seconds)
 	if not started.ok:
 		printerr("dot_profiler_run: ", started.error.message)
 		get_tree().quit(1)
 		return
-	var res: DotResult = await _prof.recording_finished
+	var res: GSResult = await _prof.recording_finished
 	if not res.ok:
 		printerr("dot_profiler_run: report not written: ", res.error.message)
 		get_tree().quit(1)
 		return
-	var r: Dictionary = (DotPaths.read_json(res.value) as DotResult).value
+	var r: Dictionary = (GSPaths.read_json(res.value) as GSResult).value
 	print("PERF " + JSON.stringify(perf_line(r, _load_s)))
 	print("PROFILER " + JSON.stringify({"report": ProjectSettings.globalize_path(res.value), "scene": _scene,
 		"budget_ms": _budget, "spikes": r.get("spike_count", 0), "causes": r.get("causes", {}),
 		"systems": (r.get("systems", []) as Array).slice(0, 8)}))
 	_print_perf_report()
-	for line in DotProfilerReport.to_text(r, 10):
+	for line in GSProfilerReport.to_text(r, 10):
 		print(line)
 	if _quit:
 		get_tree().quit(0)

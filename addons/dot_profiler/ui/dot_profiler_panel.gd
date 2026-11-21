@@ -1,4 +1,4 @@
-class_name DotProfilerPanel
+class_name GSProfilerPanel
 extends VBoxContainer
 
 ## The settings menu's profiler section: overlay toggle, Record / Stop with the time so far, where the report went,
@@ -39,14 +39,14 @@ const LOOK: Array = [
 	["overlay_bg_opacity", "Background opacity", "float", 0.0, 1.0, 0.05],
 ]
 
-var _profiler: DotProfiler = null
+var _profiler: GSProfiler = null
 var _kit: Object = null
 var _syncing := false
 var _catalog: Node = null
 
 
-## Builds the controls for [param profiler]; [param kit] is a DotMenuKit or null.
-func setup(profiler: DotProfiler, kit: Object = null) -> void:
+## Builds the controls for [param profiler]; [param kit] is a GSMenuKit or null.
+func setup(profiler: GSProfiler, kit: Object = null) -> void:
 	_profiler = profiler
 	_kit = kit
 	add_theme_constant_override(&"separation", 8)
@@ -81,7 +81,7 @@ func setup(profiler: DotProfiler, kit: Object = null) -> void:
 	var actions := HBoxContainer.new()
 	actions.add_theme_constant_override(&"separation", 8)
 	add_child(actions)
-	if DotPlatform.is_web():
+	if GSPlatform.is_web():
 		download_button = _button("Download report", false)
 		download_button.pressed.connect(download_last)
 		actions.add_child(download_button)
@@ -121,7 +121,7 @@ func _build_options() -> void:
 	rhead.add_child(all)
 	rec.add_child(rhead)
 	var group := ""
-	for r in DotProfilerCatalog.rows():
+	for r in GSProfilerCatalog.rows():
 		if r.group != group:
 			group = r.group
 			rec.add_child(_label(group))
@@ -197,10 +197,10 @@ func _look_control(spec: Array) -> Control:
 		"corner":
 			box.add_child(_label(spec[1]))
 			var ob := OptionButton.new()
-			for corner in DotProfilerConfig.CORNERS:
+			for corner in GSProfilerConfig.CORNERS:
 				ob.add_item(corner.replace("_", " "))
-			ob.selected = maxi(DotProfilerConfig.CORNERS.find(_profiler.config.overlay_corner), 0)
-			ob.item_selected.connect(func(i: int) -> void: _put(key, DotProfilerConfig.CORNERS[i]))
+			ob.selected = maxi(GSProfilerConfig.CORNERS.find(_profiler.config.overlay_corner), 0)
+			ob.item_selected.connect(func(i: int) -> void: _put(key, GSProfilerConfig.CORNERS[i]))
 			c = ob
 			box.add_child(ob)
 		_:
@@ -232,7 +232,7 @@ func _put(key: StringName, text: String) -> void:
 		_show_result(res.error.message)
 		_sync()
 		return
-	if DotProfilerConfig.UI_KEYS.has(String(key)):
+	if GSProfilerConfig.UI_KEYS.has(String(key)):
 		var _e := _profiler.save_ui_prefs()
 
 
@@ -249,16 +249,16 @@ func _sync() -> void:
 		elif ctl is SpinBox:
 			(ctl as SpinBox).value = float(v)
 		elif ctl is OptionButton:
-			(ctl as OptionButton).selected = maxi(DotProfilerConfig.CORNERS.find(String(v)), 0)
+			(ctl as OptionButton).selected = maxi(GSProfilerConfig.CORNERS.find(String(v)), 0)
 		elif ctl is LineEdit and not (ctl as LineEdit).has_focus():
 			(ctl as LineEdit).text = c.text_of(key)
 	_syncing = false
 
 
 func _preset(cheap_only: bool) -> void:
-	DotProfilerCatalog.set_all(_profiler.config, true, cheap_only)
+	GSProfilerCatalog.set_all(_profiler.config, true, cheap_only)
 	if cheap_only:
-		for r in DotProfilerCatalog.rows():
+		for r in GSProfilerCatalog.rows():
 			if r.cost in ["high", "medium"] and r.kind != "text":
 				var _s := _profiler.config.set_text(r.key, "0")
 	_sync()
@@ -266,21 +266,21 @@ func _preset(cheap_only: bool) -> void:
 
 ## Puts every look setting back to the default (small, translucent, top left) and saves.
 func reset_look() -> void:
-	var fresh := DotProfilerConfig.new()
-	for key in DotProfilerConfig.UI_KEYS:
+	var fresh := GSProfilerConfig.new()
+	for key in GSProfilerConfig.UI_KEYS:
 		if key != "overlay":
 			var _r := _profiler.config.set_text(key, fresh.text_of(key))
 	var _e := _profiler.save_ui_prefs()
 	_sync()
 
 
-## Opens the list of everything the profiler records (see [DotProfilerCatalog]); closes it when open.
+## Opens the list of everything the profiler records (see [GSProfilerCatalog]); closes it when open.
 func open_catalog() -> void:
 	if _catalog != null and is_instance_valid(_catalog):
 		_catalog.queue_free()
 		_catalog = null
 		return
-	_catalog = DotProfilerCatalogView.new()
+	_catalog = GSProfilerCatalogView.new()
 	_catalog.profiler = _profiler
 	add_child(_catalog)
 
@@ -296,7 +296,7 @@ func press_record() -> void:
 ## Opens the recordings folder in the system file browser.
 func open_folder() -> void:
 	var dir := ProjectSettings.globalize_path(_profiler.config.record_dir)
-	var _m := DotPaths.ensure_dir(_profiler.config.record_dir)
+	var _m := GSPaths.ensure_dir(_profiler.config.record_dir)
 	var err := OS.shell_open(dir)
 	if err != OK:
 		_show_result("Cannot open %s here: %s. Use Copy path." % [dir, error_string(err)])
@@ -316,11 +316,11 @@ func download_last() -> void:
 	var p := _profiler.last_saved_path()
 	if p == "":
 		return
-	var text := DotPaths.read_text(p.get_basename() + ".txt")
+	var text := GSPaths.read_text(p.get_basename() + ".txt")
 	if not text.ok:
 		_show_result("Cannot read the report: " + text.error.message)
 		return
-	var sent := DotWeb.download_text(text.value, p.get_file().get_basename() + ".txt")
+	var sent := GSWeb.download_text(text.value, p.get_file().get_basename() + ".txt")
 	if not sent.ok:
 		_show_result("Cannot hand the report to the browser: " + sent.error.message)
 
@@ -335,7 +335,7 @@ func _on_started(_seconds: float) -> void:
 	_tick()
 
 
-func _on_finished(res: DotResult) -> void:
+func _on_finished(res: GSResult) -> void:
 	if res.ok:
 		_show_result("Saved to %s (and .txt beside it)" % ProjectSettings.globalize_path(res.value))
 	else:
@@ -358,7 +358,7 @@ func _refresh() -> void:
 	else:
 		var lines := PackedStringArray(["Recent recordings:"])
 		for r in recent:
-			lines.append("  %s  (%s)" % [r.name, DotPaths.format_bytes(r.bytes)])
+			lines.append("  %s  (%s)" % [r.name, GSPaths.format_bytes(r.bytes)])
 		recent_label.text = "\n".join(lines)
 
 

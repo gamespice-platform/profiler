@@ -1,8 +1,8 @@
-class_name DotProfilerServer
+class_name GSProfilerServer
 extends Node
 
 ## A dedicated server's profiler controls: sv_profiler_* commands, profiler_* cvars, query keys.
-## GameSpice Server and GameSpice Server Query are reached by duck typing through [DotRegistry]; [method install]
+## GameSpice Server and GameSpice Server Query are reached by duck typing through [GSRegistry]; [method install]
 ## parents it under the profiler.
 
 const CHANNEL := "dot.profiler.server"
@@ -13,27 +13,27 @@ const COMMANDS := {
 	"sv_profiler_status": "Watching, recording, spikes, the repeating beat and the last saved report.",
 	"sv_profiler_frame": "Frame, process and physics times now, and the smoothed engine phases.",
 	"sv_profiler_hitches": "Spikes seen per cause, worst first, with the beat each repeats on.",
-	"sv_profiler_systems": "The N costliest systems reported through DotFrameCost (default 10).",
+	"sv_profiler_systems": "The N costliest systems reported through GSFrameCost (default 10).",
 	"sv_profiler_memory": "Static memory, object, node, orphan and resource counts.",
 	"sv_profiler_net": "Bytes and rates in and out, players and bots.",
 	"sv_profiler_metrics": "Every metric as one JSON line, for tools reading over RCON.",
 }
 
 ## The profiler this serves.
-var profiler: DotProfiler = null
+var profiler: GSProfiler = null
 var _console: Object = null
 var _server: Object = null
 var _query: Object = null
 var _cvar_names := PackedStringArray()
-var _net := DotProfilerMetrics.new()
+var _net := GSProfilerMetrics.new()
 var _record_dir_was := ""
 
 
-## Registers the commands and cvars on [param console] and a query provider on [param query]; null ones are found in [DotRegistry].
+## Registers the commands and cvars on [param console] and a query provider on [param query]; null ones are found in [GSRegistry].
 ## A default record directory moves under the server's log directory, so recordings land beside its logs.
-func install(p: DotProfiler, console: Object = null, server: Object = null, query: Object = null) -> DotResult:
+func install(p: GSProfiler, console: Object = null, server: Object = null, query: Object = null) -> GSResult:
 	if p == null or p.config == null:
-		return DotResult.fail(DotError.CODE_INVALID, "DotProfilerServer needs a profiler with a config.")
+		return GSResult.fail(GSError.CODE_INVALID, "GSProfilerServer needs a profiler with a config.")
 	profiler = p
 	if get_parent() == null:
 		p.add_child(self)
@@ -41,22 +41,22 @@ func install(p: DotProfiler, console: Object = null, server: Object = null, quer
 	_server = server if server != null else _service(&"dot_server")
 	_query = query if query != null else _service(&"dot_query_source")
 	if _console == null or not _console.has_method(&"add_source"):
-		return DotResult.fail(DotError.CODE_UNSUPPORTED, "No dot-server console to register sv_profiler_* on.")
+		return GSResult.fail(GSError.CODE_UNSUPPORTED, "No dot-server console to register sv_profiler_* on.")
 	_move_record_dir()
 	if _console.has_method(&"cvar"):
 		for cv: Object in profiler.config.bind_cvars(Callable(_console, &"cvar")):
 			_cvar_names.append(String(cv.get(&"name")))
 	var res: Variant = _console.call(&"add_source", self, PERMISSION)
-	if res is DotResult and not (res as DotResult).ok:
-		return (res as DotResult).wrap("registering sv_profiler_*")
+	if res is GSResult and not (res as GSResult).ok:
+		return (res as GSResult).wrap("registering sv_profiler_*")
 	profiler.sampler = sample
 	if _query != null and _query.has_method(&"add_provider"):
 		var q: Variant = _query.call(&"add_provider", self)
-		if q is DotResult and not (q as DotResult).ok:
-			DotLog.warn(CHANNEL, "query provider refused: %s" % (q as DotResult).error.message)
-	DotLog.debug(CHANNEL, "sv_profiler_* installed", {"record_dir": profiler.config.record_dir,
+		if q is GSResult and not (q as GSResult).ok:
+			GSLog.warn(CHANNEL, "query provider refused: %s" % (q as GSResult).error.message)
+	GSLog.debug(CHANNEL, "sv_profiler_* installed", {"record_dir": profiler.config.record_dir,
 		"query": _query != null})
-	return DotResult.success(self)
+	return GSResult.success(self)
 
 
 func _exit_tree() -> void:
@@ -72,7 +72,7 @@ func uninstall() -> void:
 	if _query != null and is_instance_valid(_query) and _query.has_method(&"remove_provider"):
 		_query.call(&"remove_provider", self)
 	if profiler != null and is_instance_valid(profiler):
-		profiler.sampler = DotProfilerMetrics.memory
+		profiler.sampler = GSProfilerMetrics.memory
 		if _record_dir_was != "":
 			profiler.config.record_dir = _record_dir_was
 	_cvar_names = PackedStringArray()
@@ -93,7 +93,7 @@ func help_for(name: String) -> String:
 func execute(line: String) -> Variant:
 	var words := line.strip_edges().split(" ", false)
 	if words.is_empty():
-		return DotResult.fail(DotError.CODE_INVALID, "Empty command.")
+		return GSResult.fail(GSError.CODE_INVALID, "Empty command.")
 	var args := words.slice(1)
 	match words[0].to_lower():
 		"sv_profiler_record":
@@ -115,12 +115,12 @@ func execute(line: String) -> Variant:
 		"sv_profiler_systems":
 			return system_lines(args[0].to_int() if not args.is_empty() else 10)
 		"sv_profiler_memory":
-			return _lines(DotProfilerMetrics.memory())
+			return _lines(GSProfilerMetrics.memory())
 		"sv_profiler_net":
 			return _lines(net())
 		"sv_profiler_metrics":
 			return JSON.stringify(metrics())
-	return DotResult.fail(DotError.CODE_INVALID, "Not a profiler command: %s" % words[0])
+	return GSResult.fail(GSError.CODE_INVALID, "Not a profiler command: %s" % words[0])
 
 
 ## Watching, recording, spikes, the beat and the last saved path.
@@ -134,7 +134,7 @@ func status() -> Dictionary:
 
 ## The engine's frame times now and the profiler's smoothed phases, in ms.
 func frame() -> Dictionary:
-	var out := DotProfilerMetrics.frame()
+	var out := GSProfilerMetrics.frame()
 	for k: String in profiler.phase_ms():
 		out["phase_" + k + "_ms"] = profiler.phase_ms()[k]
 	out["smoothed_ms"] = profiler.status().ms
@@ -151,13 +151,13 @@ func net() -> Dictionary:
 
 ## Every metric in one dictionary: frame, memory, net, status, spikes per cause and the top systems.
 func metrics() -> Dictionary:
-	return {"frame": frame(), "memory": DotProfilerMetrics.memory(), "net": net(), "status": status(),
+	return {"frame": frame(), "memory": GSProfilerMetrics.memory(), "net": net(), "status": status(),
 		"hitches": profiler.spikes_by_cause(), "systems": profiler.top_costs(10)}
 
 
 ## The sampler a recording calls on a server: memory, net, players and bots.
 func sample() -> Dictionary:
-	var out := DotProfilerMetrics.memory()
+	var out := GSProfilerMetrics.memory()
 	out.merge(net())
 	return out
 
@@ -183,7 +183,7 @@ func system_lines(n: int) -> PackedStringArray:
 
 
 func describe() -> String:
-	return "DotProfilerServer console=%s server=%s query=%s cvars=%d" % [_console != null, _server != null,
+	return "GSProfilerServer console=%s server=%s query=%s cvars=%d" % [_console != null, _server != null,
 		_query != null, _cvar_names.size()]
 
 
@@ -200,13 +200,13 @@ func _contribute(snapshot: Object) -> void:
 	if profiler == null or not profiler.config.query or not snapshot.has_method(&"contribute_game"):
 		return
 	var s := profiler.status()
-	var m := DotProfilerMetrics.memory()
+	var m := GSProfilerMetrics.memory()
 	snapshot.call(&"contribute_game", {"profiler_ms": snappedf(s.ms, 0.1), "profiler_spikes": s.spikes,
 		"profiler_period": s.period, "profiler_static_mb": snappedf(m.static_mb, 0.1), "profiler_nodes": m.nodes})
 
 
 func _move_record_dir() -> void:
-	if profiler.config.record_dir != DotProfilerConfig.new().record_dir or _server == null:
+	if profiler.config.record_dir != GSProfilerConfig.new().record_dir or _server == null:
 		return
 	var cfg: Variant = _server.get(&"config")
 	if not (cfg is Object) or cfg == null:
@@ -236,7 +236,7 @@ func _bots() -> int:
 
 
 static func _service(key: StringName) -> Object:
-	var v: Variant = DotRegistry.get_service(key)
+	var v: Variant = GSRegistry.get_service(key)
 	return v as Object if v is Object else null
 
 

@@ -1,7 +1,7 @@
-class_name DotProfilerTree
+class_name GSProfilerTree
 extends RefCounted
 
-## A call tree summed over a recording, rebuilt each frame from DotFrameCost's traced spans by time containment,
+## A call tree summed over a recording, rebuilt each frame from GSFrameCost's traced spans by time containment,
 ## under engine roots: frame > process | render | wait | physics > scripts | step (one scripts and step per tick).
 ## Paths are ";"-joined names, so [method folded] is flamegraph-ready as it is.
 
@@ -37,7 +37,7 @@ var _f_calls := PackedInt64Array()
 var _f_seen := PackedInt32Array()
 
 
-## Adds one frame. [param rec] is a DotHitchLog record (usec, events); [param ticks] the frame's physics ticks
+## Adds one frame. [param rec] is a GSHitchLog record (usec, events); [param ticks] the frame's physics ticks
 ## as pairs [tick start, scripts end] (0 when the end was not seen). Returns the frame flat as pid, incl, excl, calls.
 func add_frame(rec: Dictionary, ticks: PackedInt64Array) -> PackedInt64Array:
 	var w: PackedInt64Array = rec.get("usec", PackedInt64Array())

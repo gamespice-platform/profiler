@@ -8,6 +8,7 @@
 /addons/dot_core
 /addons/dot_menu
 /addons/dot_ui
+/addons/dot_input
 /addons/dot_settings
 /addons/dot_profile
 # The server suite section uses a real dot-server console and dot-server-query snapshot.

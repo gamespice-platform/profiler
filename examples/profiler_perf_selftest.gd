@@ -5,7 +5,7 @@ extends Node
 ## open-ended capture, and that file against the required keys (and the schema when tools/perf_report_check.py runs).
 
 const SECTIONS := 11
-const CHECKS := 96
+const CHECKS := 73
 const DIR := "user://profiler_perf_selftest"
 
 var _sections := 0

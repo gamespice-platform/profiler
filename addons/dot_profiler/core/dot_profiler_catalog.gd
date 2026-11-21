@@ -36,6 +36,8 @@ static func rows() -> Array[Dictionary]:
 		_n("perf_signal_top", "Signal fan-out rows", GROUP_EXTRA, "signals listed in the perf report's fan-out table (emits x receivers); 0 keeps every signal.", "low", ["perf"], 0.0, 200.0, 5.0),
 		_n("perf_baseline_noise_pct", "Baseline noise floor (%)", GROUP_EXTRA, "percent change below which a baseline row counts as noise; 0 lists every difference.", "low", ["perf"], 0.0, 100.0, 1.0),
 		_n("perf_load_min_ms", "Load time floor (ms)", GROUP_EXTRA, "asset loads reported through DotProfilerLoads shorter than this are left out; 0 keeps every one.", "low", ["perf"], 0.0, 1000.0, 5.0),
+		_b("perf_trace", "Call-trace page and thumbnail", GROUP_EXTRA, "writes perf-<stamp>.trace.html (an SVG icicle graph) and a PNG thumbnail beside each perf report, made from the folded stacks.", "low", ["perf"]),
+		_b("perf_gpu_time", "GPU time per viewport and pass", GROUP_EXTRA, "reads measured GPU ms per viewport and per render pass into the perf report (render.gpu); unavailable on web and Compatibility, which the report says.", "low", ["perf"]),
 		_b("census", "Node census", GROUP_EXTRA, "nodes counted by class when the recording starts and stops, so the report says which kinds grew.", "low", ["census"]),
 		_b("deep", "Native stacks (Linux perf)", GROUP_EXTRA, "samples native stacks with perf while recording (docs/deep-mode.md); needs perf installed.", "high", ["deep"]),
 		_n("script_top", "Script functions listed", GROUP_EXTRA, "the engine's script profiler: the N costliest GDScript functions by self time, in script buckets. Needs the game run with -d; 0 is off.", "medium", ["script_functions"], 0.0, 100000.0, 5.0),

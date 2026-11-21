@@ -118,6 +118,11 @@ static func _render(mon: Dictionary, opts: Dictionary) -> Dictionary:
 		if opts.get("render_estimate", false):
 			out["cost_estimate"] = {"method": "draws + triangles / %d" % TRIS_PER_DRAW,
 				"note": "ESTIMATE, not measured: est_cost weighs each draw call as %d triangles. Used because GPU time per material is unavailable." % TRIS_PER_DRAW}
+	var gpu: Dictionary = opts.get("gpu_time", {})
+	if not gpu.is_empty():
+		out["gpu"] = gpu
+		if out.has("top_draw") and gpu.get("source", "") == DotProfilerGpuTime.SOURCE_MEASURED:
+			DotProfilerGpuTime.apportion(out.top_draw, float((mon.get("render_gpu_ms", {}) as Dictionary).get("avg", 0.0)))
 	return out
 
 
@@ -258,7 +263,7 @@ static func write(p: Dictionary, dir: String) -> DotResult:
 ## Builds, checks and writes the perf report (docs/perf-report.md) for [param report] beside the recording and returns
 ## its path, or "" on failure (logged, not fatal). [param extra] is the game's options (map, bots, players, tags).
 static func save(tree: SceneTree, config: DotProfilerConfig, report: Dictionary, net_rows: Array, load_rows: Array,
-		extra: Dictionary, channel: StringName, signal_rows: Array = []) -> String:
+		extra: Dictionary, channel: StringName, signal_rows: Array = [], folded: String = "") -> String:
 	var opts := {"game_id": config.perf_game_id if config.perf_game_id != "" else String(ProjectSettings.get_setting("application/config/name", "")),
 		"platform": "web" if OS.has_feature("web") else "native", "top": config.perf_top, "loading": load_rows,
 		"role": config.perf_role if config.perf_role != "" else ("server" if DisplayServer.get_name() == "headless" else "client")}
@@ -289,4 +294,11 @@ static func save(tree: SceneTree, config: DotProfilerConfig, report: Dictionary,
 		DotLog.warn(channel, "perf report not saved: %s" % res.error.message)
 		return ""
 	DotLog.info(channel, "perf report saved to %s" % ProjectSettings.globalize_path(res.value))
+	if config.perf_trace and folded != "":
+		var art := DotProfilerTraceArt.write(folded, String(res.value).trim_suffix(".json"),
+			"%s call trace" % String(opts.game_id), config.perf_trace_png_width, config.perf_trace_max_boxes)
+		if not art.ok:
+			DotLog.warn(channel, "call trace not saved: %s" % art.error.message)
+		elif art.value != "":
+			DotLog.info(channel, "call trace saved to %s" % ProjectSettings.globalize_path(art.value))
 	return res.value

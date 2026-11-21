@@ -140,6 +140,11 @@
         "buffer_mb": { "type": "number" },
         "video_mb": { "type": "number" },
         "cost_estimate": { "type": "object", "description": "Present when top_draw rows carry est_cost: an ESTIMATE, not a measurement.", "properties": { "method": { "type": "string" }, "note": { "type": "string" } } },
+        "gpu": {
+          "type": "object",
+          "description": "Measured GPU time (v1.1, optional). source is measured or unavailable (web, Compatibility, headless; then why says so and only the estimate exists). viewports: [{name, gpu_ms, cpu_ms}]; passes: [{name, avg_ms, max_ms, frames}]. Per-material GPU time does not exist in the engine: top_draw rows carry est_gpu_ms, an estimate shared by est_draws.",
+          "properties": { "source": { "type": "string", "enum": ["measured", "unavailable"] }, "why": { "type": "string" }, "frames": { "type": "integer" }, "viewports": { "type": "array" }, "passes": { "type": "array" }, "basis": { "type": "string" } }
+        },
         "top_draw": {
           "type": "array",
           "description": "Draw/triangle attribution top-N from a snapshot at the end of the capture. kind: material, mesh or node_class.",
@@ -153,7 +158,8 @@
               "surfaces": { "type": "integer" },
               "triangles": { "type": "integer" },
               "est_draws": { "type": "integer", "description": "Instances x surfaces: an upper bound on draw calls before batching and culling." },
-              "est_cost": { "type": "number", "description": "ESTIMATE of relative cost where GPU time per material is unavailable: est_draws plus triangles weighted per draw call. Compare rows with each other, not with milliseconds." }
+              "est_cost": { "type": "number", "description": "ESTIMATE of relative cost where GPU time per material is unavailable: est_draws plus triangles weighted per draw call. Compare rows with each other, not with milliseconds." },
+              "est_gpu_ms": { "type": "number", "description": "Estimate, not a timer: the measured frame GPU ms shared by est_draws (v1.1, only when render.gpu.source is measured)." }
             }
           }
         }

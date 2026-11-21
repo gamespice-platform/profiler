@@ -24,6 +24,8 @@ const _WINDOW_UID := "uid://bbut5ootelpof"
 ## A frame over budget, attributed: {t, ms, cause, what, hints, period, physics, script, render, wait, systems}.
 signal spike(info: Dictionary)
 signal recording_started(seconds: float)
+## A perf upload finished (ok, HTTP status or 0, message without the token).
+signal perf_uploaded(ok: bool, status: int, message: String)
 ## [param result] is [method stop_recording]'s: its value is the JSON path.
 signal recording_finished(result: DotResult)
 
@@ -56,6 +58,8 @@ var _by_cause := {}
 var _recording := false
 var _rec_started_usec := 0
 var _rec_seconds := 0.0
+var _unlimited := false
+var _gpu: DotProfilerGpuTime = null
 var _rec_frames := PackedFloat32Array()
 var _rec_spikes: Array = []
 var _rec_systems := {}
@@ -120,9 +124,14 @@ func elapsed_s() -> float:
 	return (Time.get_ticks_usec() - _rec_started_usec) / 1.0e6 if _recording else 0.0
 
 
-## How long the current recording runs, or 0.
+## How long the current recording runs, or 0 (also 0 for an open-ended one: see [method is_open_ended]).
 func recording_length_s() -> float:
-	return _rec_seconds if _recording else 0.0
+	return _rec_seconds if _recording and not _unlimited else 0.0
+
+
+## True while an open-ended recording (capture_seconds 0) runs: it ends only on stop_recording.
+func is_open_ended() -> bool:
+	return _recording and _unlimited
 
 
 ## The JSON path of the last recording written, or "".
@@ -131,10 +140,14 @@ func last_saved_path() -> String:
 
 
 ## Starts a recording of [param seconds] (the config's default when 0 or less); stops itself when done.
-func start_recording(seconds: float = 0.0) -> DotResult:
+## With [param open_ended] it has no length at all and runs until [method stop_recording] (negative seconds fail).
+func start_recording(seconds: float = 0.0, open_ended: bool = false) -> DotResult:
 	if _recording:
 		return DotResult.fail(DotError.CODE_STATE, "A recording is already running (%.0f s in)." % elapsed_s())
-	_rec_seconds = seconds if seconds > 0.0 else config.record_seconds
+	if seconds < 0.0 or is_nan(seconds) or is_inf(seconds):
+		return DotResult.fail(DotError.CODE_INVALID, "Recording length %s is invalid; use a positive number of seconds (open_ended for no limit)." % seconds)
+	_unlimited = open_ended
+	_rec_seconds = 0.0 if open_ended else (seconds if seconds > 0.0 else config.record_seconds)
 	_recording = true
 	_rec_started_usec = Time.get_ticks_usec()
 	_rec_frames = PackedFloat32Array()
@@ -178,9 +191,20 @@ func start_recording(seconds: float = 0.0) -> DotResult:
 		_ticks = DotProfilerTicks.new()
 		add_child(_ticks)
 	var _t := _ticks.take()
-	_deep = _start_deep(_rec_seconds)
+	if _unlimited and config.deep:
+		DotLog.warn(CHANNEL, "deep mode off: native sampling needs a recording length and this one is open-ended")
+		_deep = {"ok": false, "reason": "open-ended recording"}
+	else:
+		_deep = _start_deep(_rec_seconds)
+	_gpu = null
+	if config.perf_gpu_time and config.perf_report:
+		_gpu = DotProfilerGpuTime.new()
+		_gpu.begin(get_tree().root, get_viewport().get_viewport_rid())
 	_apply()
-	DotLog.info(CHANNEL, "recording %.0f s of frames (budget %.1f ms)" % [_rec_seconds, config.budget_ms])
+	if _unlimited:
+		DotLog.info(CHANNEL, "recording until stopped (budget %.1f ms)" % config.budget_ms)
+	else:
+		DotLog.info(CHANNEL, "recording %.0f s of frames (budget %.1f ms)" % [_rec_seconds, config.budget_ms])
 	recording_started.emit(_rec_seconds)
 	return DotResult.success(_rec_seconds)
 
@@ -190,6 +214,9 @@ func stop_recording() -> DotResult:
 	if not _recording:
 		return DotResult.fail(DotError.CODE_STATE, "No recording is running.")
 	_recording = false
+	if _unlimited:
+		_rec_seconds = (Time.get_ticks_usec() - _rec_started_usec) / 1.0e6
+		_unlimited = false
 	_unhook_nodes()
 	if _session != null:
 		_session.counts = DotProfilerCounts.end()
@@ -207,7 +234,14 @@ func stop_recording() -> DotResult:
 	var res := DotProfilerReport.write(report, config.record_dir, config.keep_recordings,
 		_session.folded() if _session != null else "")
 	if config.perf_report and res.ok:
-		_last_perf = DotProfilerPerfReport.save(get_tree(), config, report, net_rows, load_rows, _perf_opts, CHANNEL, signal_rows)
+		var opts := _perf_opts.duplicate()
+		if _gpu != null:
+			opts["gpu_time"] = _gpu.report(config.perf_top)
+		var folded := _session.folded() if _session != null else ""
+		_last_perf = DotProfilerPerfReport.save(get_tree(), config, report, net_rows, load_rows, opts, CHANNEL, signal_rows, folded)
+		if _last_perf != "" and config.perf_upload_url != "":
+			_upload(_last_perf, folded)
+	_gpu = null
 	if _ticks != null:
 		_ticks.queue_free()
 		_ticks = null
@@ -221,6 +255,25 @@ func stop_recording() -> DotResult:
 		DotLog.warn(CHANNEL, "profile not saved: %s" % res.error.message)
 	recording_finished.emit(res)
 	return res
+
+
+## POSTs the saved perf report at [param path] and [param folded] to config.perf_upload_url (docs/perf-report.md "Uploading").
+## The token comes from DotProfilerUpload.token (environment or a file); a missing one is warned about, never printed.
+func _upload(path: String, folded: String) -> void:
+	var perf: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if not perf is Dictionary:
+		DotLog.warn(CHANNEL, "perf upload skipped: cannot read %s back" % path)
+		return
+	var tok := DotProfilerUpload.token(config.perf_upload_token_file)
+	if tok == "":
+		DotLog.warn(CHANNEL, "perf upload sent without a token: set %s or profiler_perf_upload_token_file" % DotProfilerUpload.TOKEN_ENV)
+	var req := DotProfilerUpload.request(config.perf_upload_url, perf, folded, tok)
+	DotProfilerUpload.send(self, req, func(ok: bool, status: int, message: String) -> void:
+		if ok:
+			DotLog.info(CHANNEL, "perf report uploaded (HTTP %d)" % status)
+		else:
+			DotLog.warn(CHANNEL, "perf upload failed: %s" % message)
+		perf_uploaded.emit(ok, status, message))
 
 
 ## Adds a key to the next perf reports' options: map, bots, players, tags (docs/perf-report.md "How a new game plugs in").
@@ -408,10 +461,11 @@ func toggle_capture() -> DotResult:
 	if _recording:
 		return stop_recording()
 	_force_render = true
-	var res := start_recording(config.capture_seconds)
+	var res := start_recording(config.capture_seconds, config.capture_seconds == 0.0)
 	if res.ok:
-		DotLog.info(CHANNEL, "capture started (%.0f s); press the capture key or run profiler_stop to end it early. Reports go to %s" % [
-			config.capture_seconds, ProjectSettings.globalize_path(config.record_dir)])
+		DotLog.info(CHANNEL, "capture started (%s); press the capture key or run profiler_stop to end it%s. Reports go to %s" % [
+			"until stopped" if config.capture_seconds == 0.0 else "%.0f s" % config.capture_seconds,
+			"" if config.capture_seconds == 0.0 else " early", ProjectSettings.globalize_path(config.record_dir)])
 	else:
 		_force_render = false
 	return res
@@ -733,7 +787,9 @@ func _on_frame(rec: Dictionary) -> void:
 	if _recording and _session != null:
 		_session.add(rec, _ticks.take() if _ticks != null else PackedInt64Array())
 		_session.add_overhead(Time.get_ticks_usec() - t0)
-	if _recording and not _stop_pending and elapsed_s() >= _rec_seconds:
+	if _recording and _gpu != null:
+		_gpu.sample()
+	if _recording and not _unlimited and not _stop_pending and elapsed_s() >= _rec_seconds:
 		# Deferred: stopping disconnects the hitch log that is emitting this.
 		_stop_pending = true
 		_finish_recording.call_deferred()

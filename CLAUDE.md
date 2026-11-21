@@ -26,6 +26,7 @@ Names the system behind a frame spike, its period when it repeats, an overlay of
 | `addons/dot_profiler/tools/dot_profiler_run.*` | the headless runner |
 | `examples/` | `profiler_selftest` (the suite), `profiler_ui_selftest` (menu, catalog, look options, merge, prefs), `profiler_trace_selftest`, `profiler_detail_selftest` (timeline, groups, census, script functions, compare --diff), `profiler_demo` (what the screenshot renders), `spiky` (the runner's CI target) |
 | `addons/dot_profiler/core/dot_profiler_perf_report.gd` (+ `_budget`, `_net_cost`, `_signals`, `_perf_baseline`, `_loads`) | the stable perf report v1.1 (additive `schema_minor`; v1 stays valid) (`perf-<stamp>.json`, [docs/perf-report.md](docs/perf-report.md), schema `docs/perf-report.schema.json`): changing a key means bumping `schema_version`; `examples/profiler_perf_selftest`, `tools/perf_report_check.py` |
+| `addons/dot_profiler/core/dot_profiler_gpu_time.gd`, `_trace_art.gd`, `_upload.gd` | `render.gpu` (measured viewport/pass GPU ms, labelled fallback), the `.trace.html/.png` artifacts from folded stacks, the Nightly uploader (token from env/file only, never argv or logs); `tools/perf_upload.py` is the CLI twin |
 | `tools/profile_compare.py` | compare two report JSONs; `--diff` for changes above the noise floor; tested by `tools/profile_compare_test.py` |
 | `tools/screenshot.sh`, `tools/menu_tab_shot.gd` | render the demo, or (`menu`) GameSpice Menu's Advanced page with a profiler placed, under Xvfb |
 

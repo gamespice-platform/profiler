@@ -1,10 +1,11 @@
 extends Node
 
 ## The perf report v1: budget ids and addon owners, per-class network cost, loads, a live recording that writes
-## perf-<stamp>.json, and that file against the required keys (and the schema when tools/perf_report_check.py runs).
+## perf-<stamp>.json, GPU time (measured passes, the labelled fallback), the call-trace artifacts, the Nightly uploader and an
+## open-ended capture, and that file against the required keys (and the schema when tools/perf_report_check.py runs).
 
-const SECTIONS := 7
-const CHECKS := 37
+const SECTIONS := 11
+const CHECKS := 96
 const DIR := "user://profiler_perf_selftest"
 
 var _sections := 0
@@ -21,6 +22,10 @@ func _ready() -> void:
 	_baseline()
 	_caps()
 	await _live()
+	_gpu()
+	_trace()
+	_upload()
+	await _open_ended()
 	var _c := DotPaths.remove_tree(DIR)
 	print("profiler_perf_selftest: %d of %d sections, %d checks (want %d), %d failed" % [_sections, SECTIONS, _checks, CHECKS, _failed])
 	get_tree().quit(0 if _failed == 0 and _sections == SECTIONS and _checks == CHECKS else 1)
@@ -181,4 +186,123 @@ func _caps() -> void:
 	cfg.perf_signal_top = 0
 	cfg.perf_baseline_noise_pct = -1.0
 	_check(not cfg.validate().ok, "a negative noise floor fails loudly")
+	_sections += 1
+
+
+func _gpu() -> void:
+	var g := DotProfilerGpuTime.new()
+	var none := g.report(5)
+	_check(none.source == "unavailable" and none.has("why") and none.basis == "estimate", "no samples reports unavailable with a reason and the estimate basis")
+	g.add_viewport("root", 4.0, 1.0)
+	g.add_viewport("root", 2.0, 3.0)
+	g.add_viewport("minimap", 0.5, 0.1)
+	g.add_pass("opaque", 3.0)
+	g.add_pass("opaque", 5.0)
+	g.add_pass("shadows", 1.0)
+	var r := g.report(0)
+	_check(r.source == "measured" and r.viewports[0].name == "root" and is_equal_approx(r.viewports[0].gpu_ms, 2.0) and is_equal_approx(r.viewports[0].cpu_ms, 4.0 / 3.0), "viewport GPU ms is averaged and sorted")
+	_check(r.passes[0].name == "opaque" and is_equal_approx(r.passes[0].avg_ms, 4.0) and is_equal_approx(r.passes[0].max_ms, 5.0) and int(r.passes[0].frames) == 2, "pass avg, max and frames")
+	_check(g.report(1).passes.size() == 1 and g.report(1).viewports.size() == 1 and g.report(0).passes.size() == 2, "top caps the rows and 0 keeps every row")
+	var rows: Array = [{"kind": "material", "name": "a", "est_draws": 3}, {"kind": "material", "name": "b", "est_draws": 1}, {"kind": "mesh", "name": "m", "est_draws": 9}]
+	DotProfilerGpuTime.apportion(rows, 8.0)
+	_check(is_equal_approx(rows[0].est_gpu_ms, 6.0) and is_equal_approx(rows[1].est_gpu_ms, 2.0) and not rows[2].has("est_gpu_ms"), "material GPU ms is a share of the frame by draws, meshes get none")
+	var out := DotProfilerPerfReport._render({"render_gpu_ms": {"avg": 8.0}}, {"gpu_time": r, "render_top": [{"kind": "material", "name": "a", "est_draws": 1}]})
+	_check(out.gpu.source == "measured" and is_equal_approx(out.top_draw[0].est_gpu_ms, 8.0), "render.gpu carries the numbers and materials get est_gpu_ms")
+	var out2 := DotProfilerPerfReport._render({}, {"gpu_time": none, "render_top": [{"kind": "material", "name": "a", "est_draws": 1}]})
+	_check(out2.gpu.source == "unavailable" and not out2.top_draw[0].has("est_gpu_ms"), "unavailable GPU time keeps the labelled estimate only")
+	_sections += 1
+
+
+const FOLDED := "frame;physics;fc.a 600\nframe;physics;fc.b 200\nframe;scripts;fc.c 150\nframe;render 50\n"
+
+
+func _trace() -> void:
+	var root := DotProfilerTraceArt.parse(FOLDED)
+	_check(is_equal_approx(root.v, 1000.0) and root.kids.has("frame") and is_equal_approx(root.kids.frame.v, 1000.0), "folded stacks parse into a tree with totals")
+	_check(DotProfilerTraceArt.parse("").v == 0.0 and DotProfilerTraceArt.svg("", "t") == "" and DotProfilerTraceArt.thumbnail("") == null, "empty stacks draw nothing")
+	var all := DotProfilerTraceArt.boxes(root, 0)
+	_check(all.size() == 8, "0 keeps every box (got %d)" % all.size())
+	var capped := DotProfilerTraceArt.boxes(root, 3)
+	var names := capped.map(func(b: Dictionary) -> String: return b.name)
+	_check(capped.size() == 3 and names.has("all") and names.has("frame") and names.has("physics"), "a cap keeps the widest boxes, parents with them")
+	var svg := DotProfilerTraceArt.svg(FOLDED, "a <b> & c", 600, 0)
+	_check(svg.begins_with("<svg") and svg.contains("fc.a") and svg.contains("a &lt;b&gt; &amp; c") and not svg.contains("<b>"), "the SVG names the calls and escapes the title")
+	var page := DotProfilerTraceArt.html(FOLDED, "t", 600, 0)
+	_check(page.begins_with("<!doctype html>") and page.contains("</svg>"), "the HTML page holds the SVG")
+	var img := DotProfilerTraceArt.thumbnail(FOLDED, 200, 6, 0)
+	_check(img != null and img.get_width() == 200 and img.get_height() == 4 * 6, "the thumbnail is as wide as asked and one row per depth")
+	var base := DIR.path_join("trace_case")
+	var w := DotProfilerTraceArt.write(FOLDED, base, "t", 120, 0)
+	_check(w.ok and FileAccess.file_exists(base + ".trace.html") and FileAccess.file_exists(base + ".trace.png"), "write makes the .trace.html and .trace.png")
+	var png := Image.load_from_file(base + ".trace.png")
+	_check(png != null and png.get_width() == 120, "the PNG loads back at the configured width")
+	var small := DotProfilerTraceArt.svg(FOLDED, "t", 600, 3)
+	_check(small.length() < svg.length(), "a box cap makes the file smaller")
+	var w2 := DotProfilerTraceArt.write(FOLDED, DIR.path_join("no_png"), "t", 0, 0)
+	_check(w2.ok and not FileAccess.file_exists(DIR.path_join("no_png.trace.png")), "png width 0 writes the page only")
+	_check(DotProfilerTraceArt.write("", DIR.path_join("empty"), "t", 120, 0).value == "", "no stacks writes nothing and is not an error")
+	_sections += 1
+
+
+func _upload() -> void:
+	var perf := {"game_id": "g", "platform": "web", "role": "client", "map": "de dust", "build": {"commit": "abc"}}
+	var url := DotProfilerUpload.url_for("https://n.example/", perf)
+	_check(url == "https://n.example/api/perf/ingest?game=g&platform=web&role=client&map=de%20dust&commit=abc", "the ingest URL carries the scope as query (got %s)" % url)
+	_check(DotProfilerUpload.url_for("https://n.example/api/perf/ingest", perf).count("/api/perf/ingest") == 1, "a full ingest URL is not doubled")
+	var req := DotProfilerUpload.request("https://n.example", perf, "frame;a 5", "nps_SECRET")
+	var env: Dictionary = JSON.parse_string(req.body)
+	_check(env.report.game_id == "g" and env.folded == "frame;a 5", "the body is the {report, folded} envelope")
+	_check(not req.url.contains("SECRET") and not req.body.contains("SECRET") and "Authorization: Bearer nps_SECRET" in req.headers, "the token is only in the Authorization header")
+	_check(not "Authorization: Bearer " in DotProfilerUpload.request("https://n.example", perf, "", "").headers, "no token sends no Authorization header")
+	var tf := DIR.path_join("token")
+	var f := FileAccess.open(tf, FileAccess.WRITE)
+	f.store_string("nps_FILE\nsecond line\n")
+	f.close()
+	if OS.get_environment(DotProfilerUpload.TOKEN_ENV) == "":
+		_check(DotProfilerUpload.token(tf) == "nps_FILE" and DotProfilerUpload.token("") == "" and DotProfilerUpload.token("user://missing") == "", "the token file's first line is the token")
+	else:
+		_check(DotProfilerUpload.token(tf) == OS.get_environment(DotProfilerUpload.TOKEN_ENV).strip_edges(), "the environment token wins over the file")
+	var cfg := DotProfilerConfig.new()
+	_check(cfg.perf_upload_url == "" and cfg.perf_trace and cfg.perf_gpu_time and cfg.perf_trace_max_boxes == 2000, "upload is off by default, trace and GPU time on")
+	cfg.perf_upload_url = "ftp://x"
+	_check(not cfg.validate().ok, "an upload URL must be http or https")
+	cfg.perf_upload_url = "https://n.example"
+	cfg.perf_trace_max_boxes = -1
+	_check(not cfg.validate().ok, "a negative box cap fails loudly")
+	cfg.perf_trace_max_boxes = 0
+	cfg.capture_seconds = -2.0
+	_check(not cfg.validate().ok, "a negative capture_seconds fails loudly")
+	cfg.capture_seconds = 0.0
+	_check(cfg.validate().ok, "capture_seconds 0 (open-ended) and 0 boxes (unlimited) are valid")
+	_sections += 1
+
+
+func _open_ended() -> void:
+	var cfg := DotProfilerConfig.new()
+	cfg.record_dir = DIR
+	cfg.sample_hz = 0.0
+	cfg.perf_upload_url = "http://127.0.0.1:1"
+	var prof := DotProfiler.new()
+	prof.register_as_service = false
+	prof.config = cfg
+	add_child(prof)
+	var bad := prof.start_recording(-1.0)
+	_check(not bad.ok and not prof.is_recording(), "a negative length fails loudly and starts nothing")
+	var started := prof.start_recording(0.0, true)
+	_check(started.ok and prof.is_open_ended() and prof.recording_length_s() == 0.0, "an open-ended recording starts with no length")
+	await get_tree().create_timer(0.6).timeout
+	_check(prof.is_recording(), "it is still running after 0.6 s (no auto stop)")
+	var ended: Array = []
+	prof.perf_uploaded.connect(func(ok: bool, status: int, message: String) -> void: ended.append([ok, status, message]))
+	var res := prof.stop_recording()
+	_check(res.ok and not prof.is_recording() and not prof.is_open_ended(), "stop_recording ends it and writes")
+	var rep: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(res.value))
+	_check(float(rep.seconds) >= 0.5, "the report's seconds is the real length (%s)" % rep.get("seconds"))
+	var t := 0.0
+	while ended.is_empty() and t < 10.0:
+		await get_tree().create_timer(0.1).timeout
+		t += 0.1
+	_check(not ended.is_empty() and ended[0][0] == false and not str(ended[0][2]).contains("nps_"), "an upload to a closed port reports failure through perf_uploaded")
+	prof.queue_free()
+	await get_tree().process_frame
 	_sections += 1

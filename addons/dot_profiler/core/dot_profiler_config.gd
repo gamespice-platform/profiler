@@ -139,8 +139,29 @@ extends DotConfig
 ## Asset loads shorter than this many ms are left out of the perf report's loading list; 0 keeps every one.
 @export var perf_load_min_ms: float = 0.0
 
-## Seconds the capture key (or profiler_capture) records.
+## Seconds the capture key (or profiler_capture) records; 0 records until the key is pressed again (or profiler_stop).
+## Negative values are refused; there is no upper limit.
 @export var capture_seconds: float = 10.0
+
+## Write a self-contained call-trace page (perf-<stamp>.trace.html, an SVG icicle of the folded stacks) beside every perf report.
+@export var perf_trace: bool = true
+
+## Width in px of the PNG thumbnail of that call trace (perf-<stamp>.trace.png); 0 writes no PNG.
+@export var perf_trace_png_width: int = 480
+
+## Boxes the call-trace page and thumbnail keep (widest first, so every parent stays); 0 keeps every box.
+@export var perf_trace_max_boxes: int = 2000
+
+## Read GPU time per viewport and per render pass into the perf report (render.gpu); where the renderer has no timestamps
+## (web, Compatibility, headless) the report says so and keeps the labelled estimate.
+@export var perf_gpu_time: bool = true
+
+## Panel URL (or its full /api/perf/ingest URL) every finished perf report is POSTed to; empty (the default) uploads nothing.
+## The token is never a cvar or an argument: env NIGHTLY_PERF_TOKEN, or the first line of perf_upload_token_file.
+@export var perf_upload_url: String = ""
+
+## A file (user:// or absolute) whose first line is the ingest token, read when NIGHTLY_PERF_TOKEN is not set.
+@export var perf_upload_token_file: String = ""
 
 ## Also sample native stacks with Linux perf while recording (docs/deep-mode.md).
 @export var deep: bool = false
@@ -220,8 +241,14 @@ func validate() -> DotResult:
 		return DotResult.fail(DotError.CODE_INVALID, "profiler_record_dir must be under user:// or an absolute path, not '%s'." % record_dir)
 	if sample_hz < 0.0:
 		return DotResult.fail(DotError.CODE_INVALID, "profiler_sample_hz must be 0 or more (0 takes no samples).")
-	if worst_frames < 0 or capture_seconds <= 0.0:
-		return DotResult.fail(DotError.CODE_INVALID, "profiler_worst_frames must be 0 or more and profiler_capture_seconds above 0.")
+	if worst_frames < 0:
+		return DotResult.fail(DotError.CODE_INVALID, "profiler_worst_frames must be 0 or more (0 keeps none).")
+	if capture_seconds < 0.0 or is_nan(capture_seconds) or is_inf(capture_seconds):
+		return DotResult.fail(DotError.CODE_INVALID, "profiler_capture_seconds is %s; use 0 for an open-ended capture or a positive number of seconds." % capture_seconds)
+	if perf_trace_png_width < 0 or perf_trace_max_boxes < 0:
+		return DotResult.fail(DotError.CODE_INVALID, "profiler_perf_trace_png_width and profiler_perf_trace_max_boxes must be 0 or more (0 = default width / unlimited boxes).")
+	if perf_upload_url != "" and not (perf_upload_url.begins_with("http://") or perf_upload_url.begins_with("https://")):
+		return DotResult.fail(DotError.CODE_INVALID, "profiler_perf_upload_url must start with http:// or https://, not '%s'." % perf_upload_url)
 	if suspects_top < 0 or unit_target_us < 0.0:
 		return DotResult.fail(DotError.CODE_INVALID, "profiler_suspects_top and profiler_unit_target_us must be 0 or more.")
 	if perf_top < 0 or perf_load_min_ms < 0.0 or not ["", "client", "server", "standalone"].has(perf_role):

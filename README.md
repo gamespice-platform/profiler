@@ -66,7 +66,7 @@ Every report starts with a `context` (OS, CPU, GPU, Godot build, window, tick ra
 
 ## Testing
 
-Run the scenes in `examples/` (`profiler_selftest`, `profiler_detail_selftest`, `profiler_context_selftest`, `profiler_perf_selftest`) headless with Godot, and `python3 tools/profile_compare_test.py` and `python3 tools/perf_report_check_test.py` for the compare and perf-report tools. The headless budget runner is `addons/dot_profiler/tools/dot_profiler_run.tscn`; see [docs/runner.md](docs/runner.md).
+Run the scenes in `examples/` (`profiler_selftest`, `profiler_detail_selftest`, `profiler_context_selftest`, `profiler_perf_selftest`) headless with Godot, and `python3 tools/profile_compare_test.py` and `python3 tools/perf_report_check_test.py` and `python3 tools/perf_upload_test.py` for the compare, perf-report and Nightly upload tools. The headless budget runner is `addons/dot_profiler/tools/dot_profiler_run.tscn`; see [docs/runner.md](docs/runner.md).
 
 ## Status and licence
 

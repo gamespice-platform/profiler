@@ -37,9 +37,25 @@ A budget `id` is the name a game gave `DotFrameCost.add` (`fc.bots`, `fc.net_rec
 
 Set `profiler_perf_baseline` (a path to an earlier `perf-*.json`) and every new report gets a `baseline` section: frame ms, budget and addon ms per frame, network bytes per second and render draws that moved by more than `profiler_perf_baseline_noise_pct` (default 5; `0` lists every difference), each marked `worse` or `better`. A baseline that cannot be read is logged and skipped. `profiler_perf_signal_top` cuts the fan-out table and `profiler_perf_render_estimate` turns the cost estimate on or off. Every numeric limit here takes `0` for unlimited and a negative value fails validation.
 
+## GPU time
+
+With `profiler_perf_gpu_time` on (the default) the report gets `render.gpu`. On Forward+ and Mobile with a real display it holds `source: "measured"`: per viewport (the root and every SubViewport, from `viewport_get_measured_render_time_gpu/cpu`) `{name, gpu_ms, cpu_ms}`, and per render pass (the renderer's captured RenderingDevice timestamps) `{name, avg_ms, max_ms, frames}`. On the web build, Compatibility and headless runs the engine has no timers: `source: "unavailable"` with a `why`, and only the labelled estimate remains. The engine has no per-material GPU timer, so each `top_draw` material row gets `est_gpu_ms`, the measured frame GPU ms shared by `est_draws`: an estimate, labelled as one.
+
+## Call-trace artifacts
+
+With `profiler_perf_trace` on (the default) each perf report is joined by `perf-<stamp>.trace.html` (a self-contained SVG icicle graph: width is time, hover for name and share) and `perf-<stamp>.trace.png` (a thumbnail of the same layout), both made from the recording's folded stacks. `profiler_perf_trace_max_boxes` (2000; 0 = unlimited) keeps the widest boxes so files stay small; `profiler_perf_trace_png_width` (480; 0 = no PNG). Nightly renders its own icicle from the uploaded folded stacks; these files are the copy that travels with the run on disk and in CI artifacts.
+
+## Uploading
+
+Set `profiler_perf_upload_url` (cvar, `DOT_PROFILER_PERF_UPLOAD_URL`, `--profiler-perf-upload-url`) to Nightly's base URL and a finished perf report plus its folded stacks is POSTed to `/api/perf/ingest` (JSON envelope `{report, folded}`, scope in the query). It is off when the URL is empty. The Bearer token is read from the environment variable `NIGHTLY_PERF_TOKEN` or the first line of the file named by `profiler_perf_upload_token_file`; it has no cvar and no command-line form (argv shows in process lists), is only sent in the Authorization header and is never logged. The upload uses HTTPRequest, so it works in a web export when the panel allows the page's origin. The result arrives on the `perf_uploaded(ok, status, message)` signal and in the log; a failure is reported, never retried.
+
+`python3 tools/perf_upload.py perf-<stamp>.json --url <nightly> [--folded rec.folded] [--token-file path]` does the same from a shell or CI (token from the environment or the file, never an argument); `tools/perf_upload_test.py` checks it against a local server.
+
+## Open-ended capture
+
+`profiler_capture_seconds` 0 records until the capture key is pressed again or `profiler_stop` runs (`start_recording(0.0, true)` from code); there is no length limit. The report's `seconds` is the real length. Native deep sampling needs a length and stays off for an open-ended recording. A negative value fails validation.
+
 ## Known gaps
 
-- Per-material GPU time: the engine exposes the viewport's GPU ms only, so `est_cost` (draws plus triangles over 1000) is the stand-in, labelled an estimate.
-- `capture_seconds` must be above 0; an open-ended capture is not offered.
-- Games set `perf_game_id` and call `set_perf_option` themselves; uploading reports to Nightly's Performance tab is not done by the profiler.
+- Real per-material GPU time: the engine has no such timer, so `est_gpu_ms` (and `est_cost`, draws plus triangles over 1000, where no GPU time was measured) is an estimate, labelled as one. Measured passes are not available on web or Compatibility.
 - Per-class network cost from `dot-net` is reported through `DotNetCostProbe` (found by name, no dependency). Message types dot-net does not send through its manager (a game's own transport) still need the step 4 call.

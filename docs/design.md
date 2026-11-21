@@ -49,7 +49,7 @@ Exported defaults < JSON file (`config_file`) < environment (`DOT_PROFILER_*`) <
 | `profiler_trace` | 1 | While recording, time each `DotFrameCost` span so the report has a call tree. |
 | `profiler_monitors` | 1 | While recording, read the engine monitors every frame. |
 | `profiler_worst_frames` | 5 | Slowest frames kept whole, with their tree (0 keeps none; no upper limit). |
-| `profiler_capture_seconds` | 10 | Length of a capture started by the capture key or `profiler_capture`. |
+| `profiler_capture_seconds` | 10 | Length of a capture started by the capture key or `profiler_capture`; 0 records until stopped (no limit), negative fails. |
 | `profiler_deep` | 0 | Also sample native stacks with perf while recording. |
 | `profiler_timeline` | 0 | While recording, keep each frame's ms and flag frames at 2x the running average (and 2 ms above it) or over budget, with their top self spans, systems and phases. |
 | `profiler_render_time` | 1 | While recording, read the viewport's measured render cpu and gpu ms every frame (`monitors.render_cpu_ms`, `render_gpu_ms`). |

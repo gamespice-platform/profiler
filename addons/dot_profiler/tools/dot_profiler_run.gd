@@ -14,6 +14,11 @@ var _out := "user://profiles"
 var _quit := true
 var _prof: DotProfiler = null
 var _load_s := 0.0
+## What the run was, for the perf report (docs/perf-report.md): game id, map, bots, role override (empty = by display server).
+var _game := ""
+var _map := ""
+var _bots := -1
+var _role := ""
 
 
 func _ready() -> void:
@@ -25,6 +30,10 @@ func _ready() -> void:
 			"--profile-seconds": _seconds = args[i + 1].to_float()
 			"--profile-budget": _budget = args[i + 1].to_float()
 			"--profile-out": _out = args[i + 1]
+			"--profile-game": _game = args[i + 1]
+			"--profile-map": _map = args[i + 1]
+			"--profile-bots": _bots = args[i + 1].to_int()
+			"--profile-role": _role = args[i + 1]
 	_quit = not ("--profile-stay" in args)
 	if _scene == "" or not ResourceLoader.exists(_scene):
 		printerr("dot_profiler_run: --profile-scene res://... is required and must exist (got '%s')" % _scene)
@@ -39,6 +48,14 @@ func _run() -> void:
 	_prof.config.budget_ms = _budget
 	_prof.config.record_dir = _out
 	_prof.config.keep_recordings = 200
+	if _game != "":
+		_prof.config.perf_game_id = _game
+	if _role != "":
+		_prof.config.perf_role = _role
+	if _map != "":
+		_prof.set_perf_option("map", _map)
+	if _bots >= 0:
+		_prof.set_perf_option("bots", _bots)
 	get_tree().root.add_child(_prof)
 	var t0 := Time.get_ticks_usec()
 	var packed := load(_scene) as PackedScene
@@ -68,6 +85,7 @@ func _run() -> void:
 	print("PROFILER " + JSON.stringify({"report": ProjectSettings.globalize_path(res.value), "scene": _scene,
 		"budget_ms": _budget, "spikes": r.get("spike_count", 0), "causes": r.get("causes", {}),
 		"systems": (r.get("systems", []) as Array).slice(0, 8)}))
+	_print_perf_report()
 	for line in DotProfilerReport.to_text(r, 10):
 		print(line)
 	if _quit:
@@ -90,3 +108,12 @@ static func rss_mb() -> float:
 			if line.begins_with("VmRSS:"):
 				return line.split(":")[1].strip_edges().split(" ")[0].to_float() / 1024.0
 	return OS.get_static_memory_usage() / 1048576.0
+
+
+## `PERF_REPORT_V1 {json}`: the perf report of this run on one line, so a caller on another box (gpu.sh run, ssh) gets it from stdout.
+func _print_perf_report() -> void:
+	var path := _prof.last_perf_path()
+	if path == "":
+		printerr("dot_profiler_run: no perf report was written (profiler_perf_report off?)")
+		return
+	print("PERF_REPORT_V1 " + JSON.stringify(JSON.parse_string(FileAccess.get_file_as_string(path))))

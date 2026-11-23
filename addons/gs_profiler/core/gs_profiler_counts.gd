@@ -1,11 +1,8 @@
 class_name GSProfilerCounts
 extends RefCounted
 
-## Counts of things that are not a time, reported per tick under the report's [code]engine.counts[/code]:
-## signal emits, node lookups, arrays built, anything a game suspects of churn. The engine keeps no such
-## counts in a release build, so the code that does the work says so: [code]GSProfilerCounts.add(&"emit.hit")[/code].
-##
-## Main thread only. One bool test while no recording runs.
+## Counts of things that are not a time, reported per tick under the report's [code]engine.counts[/code]: signal emits, node lookups, arrays built, anything a game suspects of churn.
+## A release build keeps no such counts, so the code that does the work says so: [code]GSProfilerCounts.add(&"emit.hit")[/code]. Main thread only; one bool test while no recording runs.
 
 ## True while a recording runs; [method add] does nothing otherwise.
 static var enabled: bool = false

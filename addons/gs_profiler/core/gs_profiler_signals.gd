@@ -1,11 +1,8 @@
 class_name GSProfilerSignals
 extends RefCounted
 
-## Signal fan-out for the perf report's [code]signals.fanout[/code]: how often a signal fires and how many receivers each emit reaches. The emitter says so:
-## [code]GSProfilerSignals.emitted(self, &"health_changed")[/code] right before (or after) [code]emit_signal[/code]; or [code]note(&"name", receivers)[/code] when it already knows the count.
-## Emit count times receivers (deliveries) is what a hot signal costs.
-##
-## Main thread only. One bool test while no recording runs; after a signal's first emit an add allocates nothing.
+## Signal fan-out for the perf report's [code]signals.fanout[/code]: how often a signal fires and how many receivers each emit reaches (emits times receivers is what a hot signal costs).
+## The emitter says so: [code]GSProfilerSignals.emitted(self, &"health_changed")[/code] beside [code]emit_signal[/code], or [code]note(&"name", receivers)[/code]. Main thread only; one bool test while no recording runs.
 
 ## True while a recording runs; the helpers do nothing otherwise.
 static var enabled: bool = false

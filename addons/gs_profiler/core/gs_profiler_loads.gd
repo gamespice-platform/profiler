@@ -1,11 +1,8 @@
 class_name GSProfilerLoads
 extends RefCounted
 
-## Asset load and stall times for the perf report's [code]loading[/code]: code that loads a scene, resource, map or
-## pack says how long it took: [code]var t := GSProfilerLoads.now()[/code] before, then
-## [code]GSProfilerLoads.add("res://maps/dust.tscn", &"scene", t)[/code] after. Free while no recording runs.
-##
-## Main thread only.
+## Asset load and stall times for the perf report's [code]loading[/code]: code that loads a scene, resource, map or pack says how long it took.
+## [code]var t := GSProfilerLoads.now()[/code] before, then [code]GSProfilerLoads.add("res://maps/dust.tscn", &"scene", t)[/code] after. Free while no recording runs; main thread only.
 
 static var enabled: bool = false
 

@@ -1,11 +1,8 @@
 class_name GSProfilerUpload
 extends RefCounted
 
-## Posts a finished perf report (v1 / v1.1) and its folded stacks to Nightly's `/api/perf/ingest` (docs/perf-report.md,
-## "Uploading"). Off unless [member GSProfilerConfig.perf_upload_url] is set. The Bearer token comes from the environment
-## variable [constant TOKEN_ENV] or the first line of [member GSProfilerConfig.perf_upload_token_file]; it has no cvar and
-## no command-line form (argv shows in process lists), and it is only ever put in the request header, never logged or
-## returned in a message. Uses HTTPRequest, so it works in a web export (the panel must allow the page's origin).
+## Posts a finished perf report (v1 / v1.1) and its folded stacks to Nightly's `/api/perf/ingest` (docs/perf-report.md, "Uploading"); off unless [member GSProfilerConfig.perf_upload_url] is set. Uses HTTPRequest, so it works on the web.
+## The Bearer token comes from [constant TOKEN_ENV] or the first line of [member GSProfilerConfig.perf_upload_token_file]; no cvar, no command line, only the request header, never logged.
 
 const TOKEN_ENV := "NIGHTLY_PERF_TOKEN"
 const INGEST_PATH := "/api/perf/ingest"

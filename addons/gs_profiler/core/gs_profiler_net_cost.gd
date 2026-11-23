@@ -1,11 +1,8 @@
 class_name GSProfilerNetCost
 extends RefCounted
 
-## Network bytes per message class, reported under the perf report's [code]network.by_class[/code]. The code that
-## sends or receives says what a message is: [code]GSProfilerNetCost.add(&"snapshot", GSProfilerNetCost.OUT, packet.size())[/code].
-## Source's net_graph and [code]net_showmsg[/code] answer the same question per message.
-##
-## Main thread only. One bool test while no recording runs; after a class's first message an add allocates nothing.
+## Network bytes per message class, reported under the perf report's [code]network.by_class[/code]; Source's net_graph and [code]net_showmsg[/code] answer the same question.
+## The sender or receiver says what a message is: [code]GSProfilerNetCost.add(&"snapshot", GSProfilerNetCost.OUT, packet.size())[/code]. Main thread only; one bool test while no recording runs.
 
 const IN := 0
 const OUT := 1

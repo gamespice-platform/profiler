@@ -21,6 +21,8 @@
 /addons/gs_sql
 /addons/gs_stats
 /addons/gs_voice
+# gs_settings stores through gs-save's GSSaveStoreFile; the menu page needs it to parse.
+/addons/gs_save
 
 # Rendered frames are looked at, not kept.
 /screenshots/

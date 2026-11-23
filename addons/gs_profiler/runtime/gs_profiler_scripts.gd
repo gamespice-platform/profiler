@@ -1,10 +1,8 @@
 class_name GSProfilerScripts
 extends RefCounted
 
-## GDScript function times for a recording: total and self time and calls per function, from the engine's
-## script profiler. Godot only runs that profiler under its local debugger, so the game must be started
-## with -d; [method start] says so and does nothing otherwise. The table arrives as printed lines, which a
-## [Logger] catches and [method parse] reads.
+## GDScript function times for a recording: total and self time and calls per function, from the engine's script profiler, which runs only under the local debugger (start the game with -d).
+## The table arrives as printed lines, which a [Logger] catches and [method parse] reads.
 
 const CHANNEL := "gs.profiler"
 const HEADER := "ACCUMULATED"
@@ -42,6 +40,7 @@ func start() -> GSResult:
 	OS.add_logger(_catcher)
 	EngineDebugger.profiler_enable(&"scripts", true)
 	_started_usec = Time.get_ticks_usec()
+	GSLog.debug(CHANNEL, "script profiler on")
 	return GSResult.success(true)
 
 
@@ -59,6 +58,7 @@ func stop(top: int, frames: int, buckets: Array[Dictionary] = []) -> Dictionary:
 	var lines := _catcher.lines
 	_catcher = null
 	var rows := parse(lines)
+	GSLog.debug(CHANNEL, "script profiler off: %d functions" % rows.size())
 	return summarize(rows, top, frames, buckets)
 
 

@@ -2,13 +2,8 @@ class_name GSProfilerGpuTime
 extends RefCounted
 
 ## Measured GPU time per viewport and per render pass while recording (perf report `render.gpu`).
-##
-## Per viewport: RenderingServer.viewport_get_measured_render_time_gpu and _cpu for the root viewport and every
-## SubViewport found when the recording starts. Per pass: the timestamps the renderer captures on the main
-## RenderingDevice (Forward+ and Mobile) once a viewport measures its render time; each pass costs the gap to the stamp
-## before it. Where none of that exists (Compatibility, the web build, a headless run) [method report] says
-## [code]source: "unavailable"[/code] and the perf report keeps only the labelled estimate (draw-count shares). The engine
-## has no per-material GPU timer, so materials stay an estimate ([method apportion]); the passes are the measured part.
+## Viewports: viewport_get_measured_render_time_gpu/_cpu for the root and every SubViewport found at start. Passes: the renderer's timestamps on the main RenderingDevice (Forward+, Mobile); each pass costs the gap to the stamp before it.
+## Where none exists (Compatibility, web, headless) [method report] says [code]source: "unavailable"[/code] and the report keeps the labelled estimate; materials stay an estimate ([method apportion]).
 
 const SOURCE_MEASURED := "measured"
 const SOURCE_UNAVAILABLE := "unavailable"

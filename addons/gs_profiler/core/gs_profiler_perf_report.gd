@@ -1,11 +1,8 @@
 class_name GSProfilerPerfReport
 extends RefCounted
 
-## The stable machine-readable report, version 1.1 (docs/perf-report.md, schema docs/perf-report.schema.json): one
-## recording's frame percentiles, budget rows with addon attribution, hitches with their responsible systems, render,
-## memory, network per class, physics, script split and loads. [method build] converts the profiler's own report
-## (GSProfilerReport) plus what [param opts] adds; [method write] saves [code]perf-<stamp>.json[/code];
-## [method problems] checks a report against the required keys.
+## The stable machine-readable report, version 1.1 (docs/perf-report.md, schema docs/perf-report.schema.json): frame percentiles, budget rows with addon attribution, hitches, render, memory, network, physics, script split and loads.
+## [method build] converts the profiler's own report (GSProfilerReport) plus [param opts]; [method write] saves [code]perf-<stamp>.json[/code]; [method problems] checks required keys.
 
 const SCHEMA := "gamespice.perf-report"
 const VERSION := 1

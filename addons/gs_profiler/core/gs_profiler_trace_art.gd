@@ -1,12 +1,8 @@
 class_name GSProfilerTraceArt
 extends RefCounted
 
-## A viewable call trace for one recording, made from its folded stacks: a self-contained HTML page holding an SVG icicle
-## graph (root on top, width = time, hover for the name and share) and a small PNG thumbnail of the same layout. Both are
-## written beside the perf report as [code]perf-<stamp>.trace.html[/code] and [code].trace.png[/code]. Nightly renders its own
-## icicle from the uploaded folded stacks; these files are the copy that travels with the run on disk and in CI artifacts.
-##
-## Size is capped by [param max_boxes] (the widest boxes win, so parents always survive their children; 0 keeps every box).
+## A viewable call trace for one recording, from its folded stacks: a self-contained HTML page with an SVG icicle graph (width = time, hover for name and share) and a PNG thumbnail.
+## Both land beside the perf report as [code]perf-<stamp>.trace.html[/code] and [code].trace.png[/code]; Nightly renders its own from the uploaded stacks. [param max_boxes] caps size (widest boxes win; 0 keeps all).
 
 const ROW_H := 16
 const MIN_LABEL_PX := 44.0

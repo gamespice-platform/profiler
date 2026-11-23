@@ -172,13 +172,12 @@ static func _memory(mon: Dictionary, r: Dictionary, opts: Dictionary) -> Diction
 	return out
 
 
-## The WebAssembly heap in MB on a web export, else -1.0 (nothing to read). Reads the JS heap through JavaScriptBridge.
+## The WebAssembly heap in MB on a web export, else -1.0 (nothing to read). Reads it through [method GSWeb.heap_bytes] (gs-core API 45), a named function in gs_web.js: nothing evaluates a string.
 static func wasm_heap_mb() -> float:
 	if not OS.has_feature("web"):
 		return -1.0
-	var bridge: Object = Engine.get_singleton("JavaScriptBridge")
-	var v: Variant = bridge.call("eval", "(typeof HEAP8!=='undefined'&&HEAP8.length)||(Module&&Module.HEAP8&&Module.HEAP8.length)||0", true)
-	return float(v) / 1048576.0 if v != null else -1.0
+	var bytes: int = GSWeb.heap_bytes()
+	return float(bytes) / 1048576.0 if bytes > 0 else -1.0
 
 
 ## The costliest materials, meshes and node classes under [param root]: 3D meshes counted by instance, surfaces and

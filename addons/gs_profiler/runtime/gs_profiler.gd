@@ -15,11 +15,11 @@ const CAPTURE_ACTION := &"profiler_capture"
 ## Opens and closes the options window over the game; bound to Shift+F10 by [method enable_menu_key].
 const MENU_ACTION := &"profiler_menu"
 
-# The UI scripts name GSProfiler back, so they are loaded by uid at use: preloading them would put the
+# The UI scripts name GSProfiler back, so they are loaded by path at use: preloading them would put the
 # profiler and its UI in one script loop, which Godot 4.7 never frees.
-const _OVERLAY_UID := "uid://dhypu2jlflde8"
-const _PANEL_UID := "uid://cj8kqa4iwjy0p"
-const _WINDOW_UID := "uid://bbut5ootelpof"
+const _OVERLAY_PATH := "res://addons/gs_profiler/ui/gs_profiler_overlay.gd"
+const _PANEL_PATH := "res://addons/gs_profiler/ui/gs_profiler_panel.gd"
+const _WINDOW_PATH := "res://addons/gs_profiler/ui/gs_profiler_window.gd"
 
 ## A frame over budget, attributed: {t, ms, cause, what, hints, period, physics, script, render, wait, systems}.
 signal spike(info: Dictionary)
@@ -441,18 +441,18 @@ func enable_capture_key(keycode: Key = KEY_F10) -> void:
 
 ## Binds Shift+[param keycode] to [constant MENU_ACTION] when the project has no binding, and listens for it.
 func enable_menu_key(keycode: Key = KEY_F10) -> void:
-	load(_WINDOW_UID).bind_key(MENU_ACTION, keycode)
+	load(_WINDOW_PATH).bind_key(MENU_ACTION, keycode)
 	set_process_input(true)
 
 
 ## True while the options window is up.
 func is_menu_open() -> bool:
-	return load(_WINDOW_UID).of(self) != null
+	return load(_WINDOW_PATH).of(self) != null
 
 
 ## Opens the options window over the game, or closes it when up. True when it is now open.
 func toggle_menu() -> bool:
-	return bool(load(_WINDOW_UID).toggle(self))
+	return bool(load(_WINDOW_PATH).toggle(self))
 
 
 func _input(event: InputEvent) -> void:
@@ -616,7 +616,7 @@ func load_ui_prefs() -> bool:
 ## The panel the settings menu shows: overlay toggle, record and stop, the saved path and recent recordings.
 ## [param kit] is GameSpice Menu's GSMenuKit, used by duck typing; null builds plain controls.
 func make_menu_panel(kit: Object = null) -> Control:
-	var panel: Control = load(_PANEL_UID).new()
+	var panel: Control = load(_PANEL_PATH).new()
 	panel.setup(self, kit)
 	return panel
 
@@ -690,7 +690,7 @@ func _stop_watch() -> void:
 
 func _show_overlay(on: bool) -> void:
 	if on and _overlay == null:
-		_overlay = load(_OVERLAY_UID).new()
+		_overlay = load(_OVERLAY_PATH).new()
 		_overlay.profiler = self
 		add_child(_overlay)
 	elif not on and _overlay != null:

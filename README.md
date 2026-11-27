@@ -38,7 +38,7 @@ Everything is off by default.
 | `record 30` | Record 30 seconds to `user://profiles/<stamp>.json`, `.txt` and `.folded`. |
 | `profiler_timeline 1` | Record every frame, spikes flagged with what ran in them. |
 | `profiler_render_detail 1` | Texture and buffer memory, draw split, render CPU/GPU ms. |
-| `profiler_groups bots:fc.bot` | Unit counts per frame and each system's cost per unit. |
+| `profiler_groups bots:ai.bot` | Unit counts per frame and each system's cost per unit. |
 | `profiler_census 1` | Node classes that grew. |
 | `profiler_script_top 30` | GDScript functions by self time (run with `-d`). |
 | `profiler_reference <path.json>` | Diff each written report against that file (`.diff.txt`). |
@@ -68,8 +68,29 @@ Every report starts with a `context` (OS, CPU, GPU, Godot build, window, tick ra
 
 Run the scenes in `examples/` (`profiler_selftest`, `profiler_detail_selftest`, `profiler_context_selftest`, `profiler_perf_selftest`) headless with Godot, and `python3 tools/profile_compare_test.py` and `python3 tools/perf_report_check_test.py` and `python3 tools/perf_upload_test.py` for the compare, perf-report and Nightly upload tools. The headless budget runner is `addons/gs_profiler/tools/gs_profiler_run.tscn`; see [docs/runner.md](docs/runner.md).
 
+## Used by
+
+All fourteen games vendor it:
+
+- [Fatal Contact](https://zeesgames.com/fatal-contact)
+- [Airdrift](https://zeesgames.com/airdrift)
+- [Playlot](https://zeesgames.com/playlot)
+- [Hungario](https://zeesgames.com/hungario)
+- [Buses From Hell](https://zeesgames.com/buses-from-hell)
+- [Smash Copter](https://zeesgames.com/smash-copter)
+- [Zombie Zone](https://zeesgames.com/zombie-zone)
+- [Hide n Seek](https://zeesgames.com/hide-n-seek)
+- [Prop Hunt](https://zeesgames.com/prop-hunt)
+- [Murder Mystery](https://zeesgames.com/murder-mystery)
+- [Deathrun](https://zeesgames.com/deathrun)
+- [Wipeout](https://zeesgames.com/wipeout)
+- [Dangerous Delivery](https://zeesgames.com/dangerous-delivery)
+- [Look At Me](https://zeesgames.com/look-at-me)
+
+The whole collection is at [zeesgames.com](https://zeesgames.com).
+
 ## Status and licence
 
-Part of the [**GameSpice**](https://gamespice.net) platform: a family of Godot addons. Written with Claude Code and maintained by `gamemann`. Every addon has headless tests, but little of this has been played by real users yet, so expect rough edges and please [open an issue](https://github.com/gamespice-platform/profiler/issues) when you hit one.
+Part of the [**GameSpice**](https://gamespice.net) platform: a family of Godot addons, MIT licensed and built with Claude Code. The headless scenes are `profiler_selftest` and its siblings under Testing. Games in [Zee's Games](https://zeesgames.com) are built on GameSpice addons and run on live servers, and this profiler is how their frame spikes are found. Report bugs on the [issue tracker](https://github.com/gamespice-platform/profiler/issues).
 
 MIT licence, see [LICENSE](LICENSE). The only closed part of the [**GameSpice**](https://gamespice.net) platform is the web back end; you can use your own instead of GameSpice's.
